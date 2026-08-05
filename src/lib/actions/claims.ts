@@ -56,6 +56,17 @@ export async function createClaimAction(
           contingencyFeePercent,
           policyNumber: policy.policyNumber || null,
           carrierName: policy.carrierName || null,
+          insurerClaimNumber: policy.insurerClaimNumber || null,
+          deskExaminerName: policy.deskExaminerName || null,
+          deskExaminerPhone: policy.deskExaminerPhone || null,
+          deskExaminerEmail: policy.deskExaminerEmail || null,
+          fieldAdjusterName: policy.fieldAdjusterName || null,
+          fieldAdjusterPhone: policy.fieldAdjusterPhone || null,
+          fieldAdjusterEmail: policy.fieldAdjusterEmail || null,
+          experts:
+            policy.experts && policy.experts.length > 0
+              ? policy.experts.filter((e) => e.name.trim())
+              : Prisma.JsonNull,
           estimatedValue:
             policy.estimatedValue !== null && policy.estimatedValue !== undefined
               ? new Prisma.Decimal(policy.estimatedValue)
@@ -208,6 +219,17 @@ export async function updateClaimDetailAction(
         lossDescription: d.lossDescription ?? null,
         policyNumber: d.policyNumber || null,
         carrierName: d.carrierName || null,
+        insurerClaimNumber: d.insurerClaimNumber || null,
+        deskExaminerName: d.deskExaminerName || null,
+        deskExaminerPhone: d.deskExaminerPhone || null,
+        deskExaminerEmail: d.deskExaminerEmail || null,
+        fieldAdjusterName: d.fieldAdjusterName || null,
+        fieldAdjusterPhone: d.fieldAdjusterPhone || null,
+        fieldAdjusterEmail: d.fieldAdjusterEmail || null,
+        experts:
+          d.experts && d.experts.length > 0
+            ? d.experts.filter((e) => e.name.trim())
+            : Prisma.JsonNull,
         estimatedValue,
         isCatClaim: d.isCatClaim,
         contingencyFeePercent: fee,

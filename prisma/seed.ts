@@ -30,6 +30,20 @@ type SeedClaimInput = {
   lossDescription: string;
   policyNumber?: string | null;
   carrierName?: string | null;
+  insurerClaimNumber?: string | null;
+  deskExaminerName?: string | null;
+  deskExaminerPhone?: string | null;
+  deskExaminerEmail?: string | null;
+  fieldAdjusterName?: string | null;
+  fieldAdjusterPhone?: string | null;
+  fieldAdjusterEmail?: string | null;
+  experts?: Array<{
+    name: string;
+    firm?: string | null;
+    specialty?: string | null;
+    phone?: string | null;
+    email?: string | null;
+  }>;
   estimatedValue?: string | null;
   isCatClaim?: boolean;
   /** Defaults: 20% standard, 10% when isCatClaim */
@@ -187,6 +201,22 @@ async function main() {
         "Hurricane-force winds removed sections of roof covering; secondary water intrusion throughout second floor.",
       policyNumber: "HO-FL-8821944",
       carrierName: "Citizens Property Insurance",
+      insurerClaimNumber: "CIT-2026-884211",
+      deskExaminerName: "Renee Caldwell",
+      deskExaminerPhone: "850-555-2201",
+      deskExaminerEmail: "r.caldwell@citizensfla.com",
+      fieldAdjusterName: "Tom Bradley",
+      fieldAdjusterPhone: "954-555-4410",
+      fieldAdjusterEmail: "t.bradley@ia-florida.com",
+      experts: [
+        {
+          name: "Dr. Alan Pierce",
+          firm: "Gulf Coast Engineering",
+          specialty: "Roof / wind uplift",
+          phone: "813-555-0900",
+          email: "apierce@gce-eng.com",
+        },
+      ],
       estimatedValue: "185000.00",
       isCatClaim: true,
       contingencyFeePercent: "10.00",
@@ -244,6 +274,19 @@ async function main() {
         "Confirmed hail event; granule loss and soft-metal denting on HVAC condenser. Engineering inspection scheduled.",
       policyNumber: "POL-99102-HA",
       carrierName: "State Farm",
+      insurerClaimNumber: "SF-FL-4419283",
+      deskExaminerName: "Kevin Ortiz",
+      deskExaminerPhone: "800-555-7788",
+      deskExaminerEmail: "kevin.ortiz@statefarm.com",
+      fieldAdjusterName: "Lisa Nguyen",
+      fieldAdjusterPhone: "813-555-3302",
+      experts: [
+        {
+          name: "Midwest Hail Labs",
+          firm: "MHL Forensics",
+          specialty: "Hail metallurgy",
+        },
+      ],
       estimatedValue: "72000.00",
       assignedAdjusterEmail: diana.email,
       claimants: [
@@ -305,6 +348,27 @@ async function main() {
         "Kitchen grease fire; smoke and heat damage throughout primary residence. Partial rebuild estimate under review with carrier.",
       policyNumber: "UFG-44021",
       carrierName: "Universal Property & Casualty",
+      insurerClaimNumber: "UPC-9920144",
+      deskExaminerName: "Sandra Blake",
+      deskExaminerPhone: "407-555-8800",
+      deskExaminerEmail: "sblake@universalproperty.com",
+      fieldAdjusterName: "Darren Moss",
+      fieldAdjusterPhone: "407-555-1199",
+      fieldAdjusterEmail: "dmoss@coastal-ia.com",
+      experts: [
+        {
+          name: "FireCause Analytics",
+          firm: "FCA Inc.",
+          specialty: "Origin & cause",
+          phone: "305-555-6700",
+        },
+        {
+          name: "Maria Santos, PE",
+          firm: "Orlando Structural",
+          specialty: "Structural engineer",
+          email: "msantos@orlandostruct.com",
+        },
+      ],
       estimatedValue: "310000.00",
       assignedAdjusterEmail: marcus.email,
       claimants: [
@@ -389,6 +453,11 @@ async function main() {
         "Tropical storm roof and screen enclosure damage. Settled after supplemental.",
       policyNumber: "FLA-77821-HO",
       carrierName: "Florida Peninsula",
+      insurerClaimNumber: "FPIC-7782101",
+      deskExaminerName: "Helen Cho",
+      deskExaminerEmail: "hcho@floridapeninsula.com",
+      fieldAdjusterName: "Greg Hale",
+      fieldAdjusterPhone: "239-555-4040",
       estimatedValue: "98000.00",
       isCatClaim: true,
       contingencyFeePercent: "10.00",
@@ -464,6 +533,12 @@ async function main() {
         "Forced entry and interior vandalism. Carrier issued denial citing vacancy exclusion — under evaluation for challenge.",
       policyNumber: "VAC-22091",
       carrierName: "American Integrity",
+      insurerClaimNumber: "AIIC-22091044",
+      deskExaminerName: "Paul Richter",
+      deskExaminerPhone: "800-555-1212",
+      deskExaminerEmail: "prichter@aiicfl.com",
+      fieldAdjusterName: "Nina Brooks",
+      fieldAdjusterPhone: "386-555-7781",
       estimatedValue: "38000.00",
       assignedAdjusterEmail: marcus.email,
       claimants: [
@@ -540,6 +615,14 @@ async function main() {
           lossDescription: input.lossDescription,
           policyNumber: input.policyNumber ?? null,
           carrierName: input.carrierName ?? null,
+          insurerClaimNumber: input.insurerClaimNumber ?? null,
+          deskExaminerName: input.deskExaminerName ?? null,
+          deskExaminerPhone: input.deskExaminerPhone ?? null,
+          deskExaminerEmail: input.deskExaminerEmail ?? null,
+          fieldAdjusterName: input.fieldAdjusterName ?? null,
+          fieldAdjusterPhone: input.fieldAdjusterPhone ?? null,
+          fieldAdjusterEmail: input.fieldAdjusterEmail ?? null,
+          experts: input.experts ?? undefined,
           estimatedValue: input.estimatedValue ?? null,
           isCatClaim: input.isCatClaim ?? false,
           contingencyFeePercent:

@@ -14,6 +14,7 @@ import { createClaimAction } from "@/lib/actions/claims";
 import { suggestCountyFromZip } from "@/lib/zip-county";
 import { contingencyForCat } from "@/lib/utils";
 import { LOSS_TYPE_LABELS, CONTACT_METHOD_LABELS } from "@/lib/claims/labels";
+import { GoogleMapsButton } from "@/components/claims/google-maps-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -63,6 +64,14 @@ const defaultValues: Draft = {
   policy: {
     policyNumber: "",
     carrierName: "",
+    insurerClaimNumber: "",
+    deskExaminerName: "",
+    deskExaminerPhone: "",
+    deskExaminerEmail: "",
+    fieldAdjusterName: "",
+    fieldAdjusterPhone: "",
+    fieldAdjusterEmail: "",
+    experts: [],
     estimatedValue: null,
   },
 };
@@ -368,23 +377,62 @@ export function FnolWizard() {
       )}
 
       {step === 2 && (
-        <div className="space-y-4 border border-brand-white/10 p-5">
+        <div className="space-y-6 border border-brand-white/10 p-5">
           <p className="text-sm text-brand-slate">
             Policy and carrier fields may be left blank when unknown at first contact.
           </p>
-          <Field label="Policy Number">
-            <Input {...form.register("policy.policyNumber")} />
-          </Field>
-          <Field label="Carrier Name">
-            <Input {...form.register("policy.carrierName")} />
-          </Field>
-          <Field label="Estimated Value (USD)">
-            <Input
-              type="number"
-              step="1"
-              {...form.register("policy.estimatedValue")}
-            />
-          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Policy Number">
+              <Input {...form.register("policy.policyNumber")} />
+            </Field>
+            <Field label="Carrier Name">
+              <Input {...form.register("policy.carrierName")} />
+            </Field>
+            <Field label="NI Claim #">
+              <Input
+                {...form.register("policy.insurerClaimNumber")}
+                placeholder="Carrier claim number"
+              />
+            </Field>
+            <Field label="Estimated Value (USD)">
+              <Input
+                type="number"
+                step="1"
+                {...form.register("policy.estimatedValue")}
+              />
+            </Field>
+          </div>
+          <div className="border-t border-brand-white/10 pt-4">
+            <p className="eyebrow mb-3">Desk Examiner</p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Name">
+                <Input {...form.register("policy.deskExaminerName")} />
+              </Field>
+              <Field label="Phone">
+                <Input {...form.register("policy.deskExaminerPhone")} />
+              </Field>
+              <Field label="Email">
+                <Input {...form.register("policy.deskExaminerEmail")} />
+              </Field>
+            </div>
+          </div>
+          <div className="border-t border-brand-white/10 pt-4">
+            <p className="eyebrow mb-3">Field Adjuster</p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Name">
+                <Input {...form.register("policy.fieldAdjusterName")} />
+              </Field>
+              <Field label="Phone">
+                <Input {...form.register("policy.fieldAdjusterPhone")} />
+              </Field>
+              <Field label="Email">
+                <Input {...form.register("policy.fieldAdjusterEmail")} />
+              </Field>
+            </div>
+          </div>
+          <p className="text-xs text-brand-slate">
+            Experts can be added on the claim file after intake.
+          </p>
         </div>
       )}
 
@@ -413,6 +461,14 @@ export function FnolWizard() {
             <p className="mt-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
               Contingency fee: {fee}%
             </p>
+            {values.property.propertyAddress ? (
+              <div className="mt-3">
+                <GoogleMapsButton
+                  address={values.property.propertyAddress}
+                  zipCode={values.property.zipCode}
+                />
+              </div>
+            ) : null}
             <Button type="button" variant="ghost" size="sm" className="mt-2" onClick={() => setStep(1)}>
               Edit
             </Button>
@@ -420,8 +476,13 @@ export function FnolWizard() {
           <ReviewBlock title="Policy / Carrier">
             <p className="text-sm">
               Policy: {values.policy.policyNumber || "—"} · Carrier:{" "}
-              {values.policy.carrierName || "—"} · Est:{" "}
+              {values.policy.carrierName || "—"} · NI #:{" "}
+              {values.policy.insurerClaimNumber || "—"} · Est:{" "}
               {values.policy.estimatedValue ?? "—"}
+            </p>
+            <p className="mt-2 text-sm text-brand-slate">
+              Desk: {values.policy.deskExaminerName || "—"} · Field:{" "}
+              {values.policy.fieldAdjusterName || "—"}
             </p>
             <Button type="button" variant="ghost" size="sm" className="mt-2" onClick={() => setStep(2)}>
               Edit

@@ -31,6 +31,8 @@ import {
 } from "@/lib/actions/claims";
 import { StatusBadge } from "@/components/claims/status-badge";
 import { DocumentUploadDialog } from "@/components/claims/document-upload-dialog";
+import { GoogleMapsButton } from "@/components/claims/google-maps-button";
+import type { CarrierExpertInput } from "@/lib/schemas/claim";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,6 +58,7 @@ import {
 export type ClaimDetailData = {
   id: string;
   claimNumber: string;
+  insurerClaimNumber: string | null;
   status: ClaimStatus;
   lossType: LossType;
   dateOfLoss: string;
@@ -65,6 +68,13 @@ export type ClaimDetailData = {
   lossDescription: string | null;
   policyNumber: string | null;
   carrierName: string | null;
+  deskExaminerName: string | null;
+  deskExaminerPhone: string | null;
+  deskExaminerEmail: string | null;
+  fieldAdjusterName: string | null;
+  fieldAdjusterPhone: string | null;
+  fieldAdjusterEmail: string | null;
+  experts: CarrierExpertInput[];
   estimatedValue: string | null;
   isCatClaim: boolean;
   contingencyFeePercent: string;
@@ -136,10 +146,23 @@ export function ClaimDetailClient({ claim, adjusters, role }: Props) {
     lossDescription: claim.lossDescription ?? "",
     policyNumber: claim.policyNumber ?? "",
     carrierName: claim.carrierName ?? "",
+    insurerClaimNumber: claim.insurerClaimNumber ?? "",
+    deskExaminerName: claim.deskExaminerName ?? "",
+    deskExaminerPhone: claim.deskExaminerPhone ?? "",
+    deskExaminerEmail: claim.deskExaminerEmail ?? "",
+    fieldAdjusterName: claim.fieldAdjusterName ?? "",
+    fieldAdjusterPhone: claim.fieldAdjusterPhone ?? "",
+    fieldAdjusterEmail: claim.fieldAdjusterEmail ?? "",
     estimatedValue: claim.estimatedValue ?? "",
     isCatClaim: claim.isCatClaim,
     assignedAdjusterId: claim.assignedAdjusterId ?? "",
   });
+
+  const [experts, setExperts] = useState<CarrierExpertInput[]>(
+    claim.experts.length
+      ? claim.experts
+      : []
+  );
 
   const [claimants, setClaimants] = useState(claim.claimants);
 
@@ -152,6 +175,14 @@ export function ClaimDetailClient({ claim, adjusters, role }: Props) {
       lossDescription: property.lossDescription || null,
       policyNumber: property.policyNumber || null,
       carrierName: property.carrierName || null,
+      insurerClaimNumber: property.insurerClaimNumber || null,
+      deskExaminerName: property.deskExaminerName || null,
+      deskExaminerPhone: property.deskExaminerPhone || null,
+      deskExaminerEmail: property.deskExaminerEmail || null,
+      fieldAdjusterName: property.fieldAdjusterName || null,
+      fieldAdjusterPhone: property.fieldAdjusterPhone || null,
+      fieldAdjusterEmail: property.fieldAdjusterEmail || null,
+      experts: experts.filter((e) => e.name.trim()),
     });
     if (!result.ok) {
       setError(result.error);
@@ -210,9 +241,22 @@ export function ClaimDetailClient({ claim, adjusters, role }: Props) {
         <div>
           <p className="eyebrow">Secure Record</p>
           <div className="mt-1 flex flex-wrap items-center gap-3">
-            <h1 className="font-mono text-2xl tracking-wide text-brand-gold">
-              {claim.claimNumber}
-            </h1>
+            <div>
+              <p className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
+                BL Claim #
+              </p>
+              <h1 className="font-mono text-2xl tracking-wide text-brand-gold">
+                {claim.claimNumber}
+              </h1>
+            </div>
+            <div>
+              <p className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
+                NI Claim #
+              </p>
+              <p className="font-mono text-lg tracking-wide text-brand-white">
+                {claim.insurerClaimNumber || "—"}
+              </p>
+            </div>
             <StatusBadge status={claim.status} />
             {claim.isCatClaim ? (
               <Badge className="border-brand-white/10 text-brand-slate">CAT</Badge>
@@ -229,6 +273,10 @@ export function ClaimDetailClient({ claim, adjusters, role }: Props) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <GoogleMapsButton
+            address={property.propertyAddress || claim.propertyAddress}
+            zipCode={property.zipCode || claim.zipCode}
+          />
           <Button asChild variant="outline" size="sm">
             <Link href={`/claims/${claim.id}/documents`}>Document Vault</Link>
           </Button>
@@ -363,7 +411,13 @@ export function ClaimDetailClient({ claim, adjusters, role }: Props) {
 
           {/* Property */}
           <section className="border border-brand-white/10 p-5">
-            <p className="eyebrow mb-4">Property & Loss</p>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="eyebrow">Property & Loss</p>
+              <GoogleMapsButton
+                address={property.propertyAddress}
+                zipCode={property.zipCode}
+              />
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Address" className="sm:col-span-2">
                 <Input
@@ -440,6 +494,19 @@ export function ClaimDetailClient({ claim, adjusters, role }: Props) {
                   }
                 />
               </Field>
+              <Field label="NI Claim #">
+                <Input
+                  disabled={!editable}
+                  value={property.insurerClaimNumber}
+                  onChange={(e) =>
+                    setProperty({
+                      ...property,
+                      insurerClaimNumber: e.target.value,
+                    })
+                  }
+                  placeholder="Carrier claim number"
+                />
+              </Field>
               <Field label="Est. Value">
                 <Input
                   disabled={!editable}
@@ -495,9 +562,211 @@ export function ClaimDetailClient({ claim, adjusters, role }: Props) {
                 CAT claim — contingency {contingencyForCat(property.isCatClaim)}%
               </span>
             </div>
+          </section>
+
+          {/* Carrier contacts */}
+          <section className="border border-brand-white/10 p-5">
+            <p className="eyebrow mb-4">Carrier Contacts</p>
+            <div className="space-y-6">
+              <div>
+                <p className="mb-3 font-sans text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold">
+                  Desk Examiner
+                </p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Field label="Name">
+                    <Input
+                      disabled={!editable}
+                      value={property.deskExaminerName}
+                      onChange={(e) =>
+                        setProperty({
+                          ...property,
+                          deskExaminerName: e.target.value,
+                        })
+                      }
+                    />
+                  </Field>
+                  <Field label="Phone">
+                    <Input
+                      disabled={!editable}
+                      value={property.deskExaminerPhone}
+                      onChange={(e) =>
+                        setProperty({
+                          ...property,
+                          deskExaminerPhone: e.target.value,
+                        })
+                      }
+                    />
+                  </Field>
+                  <Field label="Email">
+                    <Input
+                      disabled={!editable}
+                      value={property.deskExaminerEmail}
+                      onChange={(e) =>
+                        setProperty({
+                          ...property,
+                          deskExaminerEmail: e.target.value,
+                        })
+                      }
+                    />
+                  </Field>
+                </div>
+              </div>
+              <div className="border-t border-brand-white/10 pt-4">
+                <p className="mb-3 font-sans text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold">
+                  Field Adjuster
+                </p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Field label="Name">
+                    <Input
+                      disabled={!editable}
+                      value={property.fieldAdjusterName}
+                      onChange={(e) =>
+                        setProperty({
+                          ...property,
+                          fieldAdjusterName: e.target.value,
+                        })
+                      }
+                    />
+                  </Field>
+                  <Field label="Phone">
+                    <Input
+                      disabled={!editable}
+                      value={property.fieldAdjusterPhone}
+                      onChange={(e) =>
+                        setProperty({
+                          ...property,
+                          fieldAdjusterPhone: e.target.value,
+                        })
+                      }
+                    />
+                  </Field>
+                  <Field label="Email">
+                    <Input
+                      disabled={!editable}
+                      value={property.fieldAdjusterEmail}
+                      onChange={(e) =>
+                        setProperty({
+                          ...property,
+                          fieldAdjusterEmail: e.target.value,
+                        })
+                      }
+                    />
+                  </Field>
+                </div>
+              </div>
+              <div className="border-t border-brand-white/10 pt-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <p className="font-sans text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold">
+                    Expert(s)
+                  </p>
+                  {editable ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        setExperts([
+                          ...experts,
+                          {
+                            name: "",
+                            firm: "",
+                            specialty: "",
+                            phone: "",
+                            email: "",
+                          },
+                        ])
+                      }
+                    >
+                      Add Expert
+                    </Button>
+                  ) : null}
+                </div>
+                {experts.length === 0 ? (
+                  <p className="text-sm text-brand-slate">No experts on file</p>
+                ) : (
+                  <div className="space-y-4">
+                    {experts.map((ex, i) => (
+                      <div
+                        key={i}
+                        className="grid gap-3 border border-brand-white/10 p-3 sm:grid-cols-2"
+                      >
+                        <Field label="Name">
+                          <Input
+                            disabled={!editable}
+                            value={ex.name}
+                            onChange={(e) => {
+                              const next = [...experts];
+                              next[i] = { ...ex, name: e.target.value };
+                              setExperts(next);
+                            }}
+                          />
+                        </Field>
+                        <Field label="Firm">
+                          <Input
+                            disabled={!editable}
+                            value={ex.firm ?? ""}
+                            onChange={(e) => {
+                              const next = [...experts];
+                              next[i] = { ...ex, firm: e.target.value };
+                              setExperts(next);
+                            }}
+                          />
+                        </Field>
+                        <Field label="Specialty">
+                          <Input
+                            disabled={!editable}
+                            value={ex.specialty ?? ""}
+                            onChange={(e) => {
+                              const next = [...experts];
+                              next[i] = { ...ex, specialty: e.target.value };
+                              setExperts(next);
+                            }}
+                          />
+                        </Field>
+                        <Field label="Phone">
+                          <Input
+                            disabled={!editable}
+                            value={ex.phone ?? ""}
+                            onChange={(e) => {
+                              const next = [...experts];
+                              next[i] = { ...ex, phone: e.target.value };
+                              setExperts(next);
+                            }}
+                          />
+                        </Field>
+                        <Field label="Email" className="sm:col-span-2">
+                          <Input
+                            disabled={!editable}
+                            value={ex.email ?? ""}
+                            onChange={(e) => {
+                              const next = [...experts];
+                              next[i] = { ...ex, email: e.target.value };
+                              setExperts(next);
+                            }}
+                          />
+                        </Field>
+                        {editable ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="sm:col-span-2 justify-self-start"
+                            onClick={() =>
+                              setExperts(experts.filter((_, j) => j !== i))
+                            }
+                          >
+                            Remove
+                          </Button>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
             {editable ? (
               <Button className="mt-4" size="sm" variant="outline" onClick={saveProperty}>
-                Save Property
+                Save Property & Carrier
               </Button>
             ) : null}
           </section>

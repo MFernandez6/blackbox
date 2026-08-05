@@ -56,9 +56,25 @@ export const claimPropertySchema = z.object({
   isCatClaim: z.boolean().default(false),
 });
 
+export const carrierExpertSchema = z.object({
+  name: z.string().min(1, "Expert name is required"),
+  firm: z.string().optional().nullable(),
+  specialty: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+});
+
 export const claimPolicySchema = z.object({
   policyNumber: z.string().optional().nullable(),
   carrierName: z.string().optional().nullable(),
+  insurerClaimNumber: z.string().optional().nullable(),
+  deskExaminerName: z.string().optional().nullable(),
+  deskExaminerPhone: z.string().optional().nullable(),
+  deskExaminerEmail: z.string().optional().nullable(),
+  fieldAdjusterName: z.string().optional().nullable(),
+  fieldAdjusterPhone: z.string().optional().nullable(),
+  fieldAdjusterEmail: z.string().optional().nullable(),
+  experts: z.array(carrierExpertSchema).optional().default([]),
   estimatedValue: z
     .union([z.string(), z.number()])
     .optional()
@@ -105,6 +121,14 @@ export const claimDetailUpdateSchema = z.object({
   lossDescription: z.string().nullable().optional(),
   policyNumber: z.string().nullable().optional(),
   carrierName: z.string().nullable().optional(),
+  insurerClaimNumber: z.string().nullable().optional(),
+  deskExaminerName: z.string().nullable().optional(),
+  deskExaminerPhone: z.string().nullable().optional(),
+  deskExaminerEmail: z.string().nullable().optional(),
+  fieldAdjusterName: z.string().nullable().optional(),
+  fieldAdjusterPhone: z.string().nullable().optional(),
+  fieldAdjusterEmail: z.string().nullable().optional(),
+  experts: z.array(carrierExpertSchema).optional().default([]),
   estimatedValue: z.union([z.string(), z.number(), z.null()]).optional(),
   isCatClaim: z.boolean(),
   assignedAdjusterId: z.string().nullable().optional(),
@@ -131,6 +155,7 @@ export const loginSchema = z.object({
 export type ClaimantInput = z.infer<typeof claimantSchema>;
 export type ClaimPropertyInput = z.infer<typeof claimPropertySchema>;
 export type ClaimPolicyInput = z.infer<typeof claimPolicySchema>;
+export type CarrierExpertInput = z.infer<typeof carrierExpertSchema>;
 export type FnolIntakeInput = z.input<typeof fnolIntakeSchema>;
 export type FnolIntakeParsed = z.output<typeof fnolIntakeSchema>;
 export type StatusChangeInput = z.infer<typeof statusChangeSchema>;

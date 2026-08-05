@@ -52,6 +52,7 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
     const q = searchParams.q.trim();
     where.OR = [
       { claimNumber: { contains: q, mode: "insensitive" } },
+      { insurerClaimNumber: { contains: q, mode: "insensitive" } },
       {
         claimants: {
           some: {
@@ -69,6 +70,8 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
     switch (sort) {
       case "claimNumber":
         return { claimNumber: dir };
+      case "insurerClaimNumber":
+        return { insurerClaimNumber: dir };
       case "status":
         return { status: dir };
       case "lossType":
@@ -123,6 +126,7 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
     return {
       id: c.id,
       claimNumber: c.claimNumber,
+      insurerClaimNumber: c.insurerClaimNumber,
       status: c.status,
       lossType: c.lossType,
       dateOfLoss: c.dateOfLoss.toISOString(),

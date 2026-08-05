@@ -26,12 +26,11 @@ export function AppShell({ children, user }: AppShellProps) {
           <div className="flex items-center gap-10">
             <Link href="/dashboard" className="group shrink-0">
               <div className="flex flex-col leading-none">
-                <span className="font-serif text-lg font-bold tracking-[0.18em] text-brand-gold sm:text-xl sm:tracking-[0.2em]">
-                  BLACKLINE
+                <span className="font-serif text-xl font-bold tracking-[0.2em] text-brand-gold sm:text-2xl">
+                  BLACKBOX
                 </span>
-                <span className="mt-1 font-serif text-[0.5625rem] font-semibold uppercase tracking-[0.2em] text-brand-white/88">
-                  BLACKBOX{" "}
-                  <span className="font-medium text-brand-slate">OPS</span>
+                <span className="mt-1.5 font-sans text-[9px] font-bold uppercase tracking-[0.18em] text-brand-slate">
+                  For Blackline Public Adjusters
                 </span>
               </div>
             </Link>

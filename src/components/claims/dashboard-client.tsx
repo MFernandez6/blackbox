@@ -26,6 +26,7 @@ import { cn, daysOpen, formatCurrency } from "@/lib/utils";
 export type DashboardClaimRow = {
   id: string;
   claimNumber: string;
+  insurerClaimNumber: string | null;
   status: ClaimStatus;
   lossType: LossType;
   dateOfLoss: string;
@@ -172,8 +173,8 @@ export function DashboardClient({
           <div className="space-y-2">
             <Label>Search</Label>
             <Input
-              placeholder="Claim number or claimant"
               defaultValue={searchParams.get("q") ?? ""}
+              placeholder="BL #, NI #, or claimant"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   setParam("q", (e.target as HTMLInputElement).value || null);
@@ -281,10 +282,11 @@ export function DashboardClient({
             ) : null}
           </div>
         ) : (
-          <table className="w-full min-w-[900px] text-sm">
+          <table className="w-full min-w-[1000px] text-sm">
             <thead className="border-b border-brand-white/10 bg-brand-navy-deep/50">
               <tr>
-                <SortHeader col="claimNumber" label="Claim #" />
+                <SortHeader col="claimNumber" label="BL Claim #" />
+                <SortHeader col="insurerClaimNumber" label="NI Claim #" />
                 <SortHeader col="claimant" label="Claimant" />
                 <SortHeader col="status" label="Status" />
                 <SortHeader col="lossType" label="Loss" />
@@ -307,10 +309,13 @@ export function DashboardClient({
                   <td className="px-3 py-3">
                     <Link
                       href={`/claims/${c.id}`}
-                      className="font-mono text-xs tracking-wide text-brand-white hover:underline"
+                      className="font-mono text-xs tracking-wide text-brand-gold hover:underline"
                     >
                       {c.claimNumber}
                     </Link>
+                  </td>
+                  <td className="px-3 py-3 font-mono text-xs text-brand-white/80">
+                    {c.insurerClaimNumber ?? "—"}
                   </td>
                   <td className="px-3 py-3 text-brand-white/90">{c.primaryClaimant}</td>
                   <td className="px-3 py-3">

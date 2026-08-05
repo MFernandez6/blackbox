@@ -43,29 +43,34 @@ export default function LoginForm() {
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center px-6">
       <div
-        className="pointer-events-none absolute inset-0 opacity-40"
+        className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(198,168,91,0.12), transparent)",
+            "radial-gradient(ellipse 70% 45% at 50% -10%, rgba(198,168,91,0.1), transparent)",
         }}
       />
+
       <div className="relative w-full max-w-sm">
-        <div className="mb-10 text-center">
-          <div className="mb-6 flex flex-col items-center leading-none">
-            <span className="font-serif text-2xl font-bold tracking-[0.2em] text-brand-gold sm:text-3xl">
-              BLACKLINE
-            </span>
-            <span className="mt-2 font-serif text-[0.625rem] font-semibold uppercase tracking-[0.22em] text-brand-white/88">
-              PUBLIC ADJUSTERS{" "}
-              <span className="font-medium text-brand-slate">LLC</span>
-            </span>
-          </div>
-          <p className="eyebrow mb-2">Secure Protocol</p>
-          <h1 className="font-serif text-xl font-semibold tracking-[0.14em] text-brand-white">
+        {/* Product first */}
+        <div className="mb-8 text-center">
+          <p className="eyebrow mb-4">Internal claims system</p>
+          <h1 className="font-serif text-4xl font-bold tracking-[0.22em] text-brand-gold sm:text-5xl">
             BLACKBOX
           </h1>
-          <p className="mt-3 text-sm text-brand-slate">
-            Authorized personnel — claim file access only
+          <p className="mt-4 text-sm leading-relaxed text-brand-white/80">
+            Secure file operations for public adjusting staff.
+            Not a client portal.
+          </p>
+        </div>
+
+        {/* Firm attribution — secondary, clearly separate */}
+        <div className="mb-8 border border-brand-white/10 bg-brand-navy-deep/40 px-4 py-3 text-center">
+          <p className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
+            Operated for
+          </p>
+          <p className="mt-1.5 font-serif text-xs font-semibold tracking-[0.14em] text-brand-white/85">
+            BLACKLINE PUBLIC ADJUSTERS{" "}
+            <span className="text-brand-slate">LLC</span>
           </p>
         </div>
 
@@ -79,7 +84,12 @@ export default function LoginForm() {
           />
         ) : null}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <form
+          method="post"
+          action="#"
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-5"
+        >
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -104,13 +114,18 @@ export default function LoginForm() {
               <p className="text-xs text-denied">{errors.password.message}</p>
             ) : null}
           </div>
-          <Button type="submit" variant="solid" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "Authenticating…" : "Enter"}
+          <Button
+            type="submit"
+            variant="solid"
+            className="w-full"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Authenticating…" : "Enter BLACKBOX"}
           </Button>
         </form>
 
         <p className="mt-8 text-center font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
-          Chain of custody · session encrypted
+          Authorized personnel only · session encrypted
         </p>
       </div>
     </div>

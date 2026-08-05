@@ -121,8 +121,10 @@ model Adjuster {
 
 model Claim {
   id                     String      @id @default(cuid())
-  /// Format BB-YYYY-#### — generated via ClaimNumberSequence, never random
+  /// Format BB-YYYY-#### — Blackline (BL) claim number, generated via sequence
   claimNumber            String      @unique
+  /// Carrier / Named Insured claim number (NI Claim #) — often unknown at intake
+  insurerClaimNumber     String?
   status                 ClaimStatus @default(INTAKE)
   lossType               LossType
   dateOfLoss             DateTime    @db.Date
@@ -133,6 +135,16 @@ model Claim {
   lossDescription        String?     @db.Text
   policyNumber           String?
   carrierName            String?
+  /// Carrier desk examiner handling the file
+  deskExaminerName       String?
+  deskExaminerPhone      String?
+  deskExaminerEmail      String?
+  /// Carrier field adjuster
+  fieldAdjusterName      String?
+  fieldAdjusterPhone     String?
+  fieldAdjusterEmail     String?
+  /// Carrier / IA experts — JSON array of { name, firm?, specialty?, phone?, email? }
+  experts                Json?
   estimatedValue         Decimal?    @db.Decimal(14, 2)
   /// True when loss arises from a declared catastrophe / emergency event
   isCatClaim             Boolean     @default(false)
@@ -156,6 +168,7 @@ model Claim {
   @@index([status, lossType])
   @@index([isArchived])
   @@index([updatedAt])
+  @@index([insurerClaimNumber])
 }
 
 // ---------------------------------------------------------------------------

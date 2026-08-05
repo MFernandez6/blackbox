@@ -51,6 +51,7 @@ async function ClaimDetailData({ id }: { id: string }) {
   const data: ClaimDetailData = {
     id: claim.id,
     claimNumber: claim.claimNumber,
+    insurerClaimNumber: claim.insurerClaimNumber,
     status: claim.status,
     lossType: claim.lossType,
     dateOfLoss: claim.dateOfLoss.toISOString(),
@@ -60,6 +61,15 @@ async function ClaimDetailData({ id }: { id: string }) {
     lossDescription: claim.lossDescription,
     policyNumber: claim.policyNumber,
     carrierName: claim.carrierName,
+    deskExaminerName: claim.deskExaminerName,
+    deskExaminerPhone: claim.deskExaminerPhone,
+    deskExaminerEmail: claim.deskExaminerEmail,
+    fieldAdjusterName: claim.fieldAdjusterName,
+    fieldAdjusterPhone: claim.fieldAdjusterPhone,
+    fieldAdjusterEmail: claim.fieldAdjusterEmail,
+    experts: Array.isArray(claim.experts)
+      ? (claim.experts as ClaimDetailData["experts"])
+      : [],
     estimatedValue: claim.estimatedValue?.toString() ?? null,
     isCatClaim: claim.isCatClaim,
     contingencyFeePercent: claim.contingencyFeePercent.toString(),
