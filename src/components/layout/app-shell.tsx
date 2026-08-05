@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { BlackboxMark } from "@/components/brand/blackbox-mark";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -26,11 +27,9 @@ export function AppShell({ children, user }: AppShellProps) {
           <div className="flex items-center gap-10">
             <Link href="/dashboard" className="group shrink-0">
               <div className="flex flex-col leading-none">
-                <span className="font-serif text-xl font-bold tracking-[0.2em] text-brand-gold sm:text-2xl">
-                  BLACKBOX
-                </span>
+                <BlackboxMark className="font-serif text-xl font-bold tracking-[0.2em] text-brand-gold sm:text-2xl" />
                 <span className="mt-1.5 font-sans text-[9px] font-bold uppercase tracking-[0.18em] text-brand-slate">
-                  For Blackline Public Adjusters
+                  For Blackline Public Adjusters LLC
                 </span>
               </div>
             </Link>

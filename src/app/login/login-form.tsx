@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ErrorBanner } from "@/components/ui/error-banner";
+import { BlackboxMark } from "@/components/brand/blackbox-mark";
 
 type LoginValues = z.infer<typeof loginSchema>;
 
@@ -54,9 +55,10 @@ export default function LoginForm() {
         {/* Product first */}
         <div className="mb-8 text-center">
           <p className="eyebrow mb-4">Internal claims system</p>
-          <h1 className="font-serif text-4xl font-bold tracking-[0.22em] text-brand-gold sm:text-5xl">
-            BLACKBOX
-          </h1>
+          <BlackboxMark
+            as="h1"
+            className="justify-center font-serif text-4xl font-bold tracking-[0.22em] text-brand-gold sm:text-5xl"
+          />
           <p className="mt-4 text-sm leading-relaxed text-brand-white/80">
             Secure file operations for public adjusting staff.
             Not a client portal.
@@ -69,8 +71,7 @@ export default function LoginForm() {
             Operated for
           </p>
           <p className="mt-1.5 font-serif text-xs font-semibold tracking-[0.14em] text-brand-white/85">
-            BLACKLINE PUBLIC ADJUSTERS{" "}
-            <span className="text-brand-slate">LLC</span>
+            BLACKLINE PUBLIC ADJUSTERS LLC
           </p>
         </div>
 
@@ -120,7 +121,7 @@ export default function LoginForm() {
             className="w-full"
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Authenticating…" : "Enter BLACKBOX"}
+            {isSubmitting ? "Authenticating…" : "Enter BLACKBOX™"}
           </Button>
         </form>
 

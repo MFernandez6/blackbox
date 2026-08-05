@@ -118,6 +118,17 @@ async function main() {
 
   console.log("Creating adjusters…");
 
+  // Owner / principal adjuster — Blackline Public Adjusters LLC
+  const miguel = await prisma.adjuster.create({
+    data: {
+      name: "Miguel Fernandez",
+      email: "miguel.fernandez@blacklineadjusting.com",
+      passwordHash,
+      licenseNumber: "W100001",
+      role: AdjusterRole.ADMIN,
+    },
+  });
+
   const diana = await prisma.adjuster.create({
     data: {
       name: "Diana Reyes",
@@ -159,6 +170,7 @@ async function main() {
   });
 
   const adjusterByEmail: Record<string, string> = {
+    [miguel.email]: miguel.id,
     [diana.email]: diana.id,
     [marcus.email]: marcus.id,
     [sofia.email]: sofia.id,
@@ -182,7 +194,7 @@ async function main() {
       policyNumber: null,
       carrierName: null,
       estimatedValue: "45000.00",
-      assignedAdjusterEmail: marcus.email,
+      assignedAdjusterEmail: miguel.email,
       claimants: [
         {
           firstName: "Elena",
@@ -616,7 +628,7 @@ async function main() {
       ? adjusterByEmail[input.assignedAdjusterEmail]
       : null;
 
-    const createdById = assignedAdjusterId ?? diana.id;
+    const createdById = assignedAdjusterId ?? miguel.id;
     const number = claimNumber(input.year, input.sequence);
 
     await prisma.$transaction(async (tx) => {
@@ -726,9 +738,10 @@ async function main() {
 
   console.log("");
   console.log("Seed complete.");
-  console.log("  Adjusters: 4 (ADMIN / ADJUSTER×2 / VIEWER)");
+  console.log("  Adjusters: 5 (owner ADMIN + samples)");
   console.log(`  Claims:    ${claims.length} (year ${year}, sequence 0001–000${claims.length})`);
-  console.log(`  Login:     diana.reyes@blacklineadjusting.com / ${SEED_PASSWORD}`);
+  console.log(`  Login:     miguel.fernandez@blacklineadjusting.com / ${SEED_PASSWORD}`);
+  console.log(`             diana.reyes@blacklineadjusting.com / ${SEED_PASSWORD}`);
   console.log(`             frankie@blacklineadjusting.com / ${SEED_PASSWORD}`);
 }
 

@@ -1,7 +1,7 @@
-# BLACKBOX
+# BLACKBOX™
 
-Internal claims management system for **Blackline Public Adjusters LLC**.  
-Ops tool for adjusters and staff — not client-facing.
+Internal claims management system operated for **Blackline Public Adjusters LLC**.  
+Ops tool for adjusters and staff — not client-facing. Owner / principal: Miguel Fernandez.
 
 ## Stack
 
@@ -44,6 +44,7 @@ All seed adjusters share password: `Password123!`
 
 | Email | Role |
 |---|---|
+| `miguel.fernandez@blacklineadjusting.com` | ADMIN (owner / principal adjuster) |
 | `diana.reyes@blacklineadjusting.com` | ADMIN |
 | `marcus.chen@blacklineadjusting.com` | ADJUSTER |
 | `frankie@blacklineadjusting.com` | ADJUSTER |

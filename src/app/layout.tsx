@@ -23,7 +23,7 @@ const cinzel = Cinzel({
 });
 
 export const metadata: Metadata = {
-  title: "BLACKBOX — Blackline Public Adjusters",
+  title: "BLACKBOX™ — Blackline Public Adjusters LLC",
   description: "Internal claims management — Blackline Public Adjusters LLC",
 };
 
