@@ -20,28 +20,31 @@ export function AppShell({ children, user }: AppShellProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-ink text-paper">
-      <header className="border-b border-hairline">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-6 px-6 py-4">
+    <div className="min-h-screen bg-brand-navy text-brand-white">
+      <header className="border-b border-brand-white/5 bg-brand-navy/90 backdrop-blur-md">
+        <div className="mx-auto flex h-20 max-w-[1400px] items-center justify-between gap-6 px-6">
           <div className="flex items-center gap-10">
-            <Link href="/dashboard" className="group">
-              <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
-                Blackline Public Adjusters
-              </p>
-              <p className="font-serif text-xl tracking-tight text-paper group-hover:text-paper/90">
-                BLACKBOX
-              </p>
+            <Link href="/dashboard" className="group shrink-0">
+              <div className="flex flex-col leading-none">
+                <span className="font-serif text-lg font-bold tracking-[0.18em] text-brand-gold sm:text-xl sm:tracking-[0.2em]">
+                  BLACKLINE
+                </span>
+                <span className="mt-1 font-serif text-[0.5625rem] font-semibold uppercase tracking-[0.2em] text-brand-white/88">
+                  BLACKBOX{" "}
+                  <span className="font-medium text-brand-slate">OPS</span>
+                </span>
+              </div>
             </Link>
-            <nav className="hidden items-center gap-6 md:flex">
+            <nav className="hidden items-center gap-8 md:flex">
               {nav.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "font-mono text-[10px] uppercase tracking-[0.18em] transition-colors",
+                    "font-sans text-[10px] font-bold uppercase tracking-[0.2em] transition-colors",
                     pathname.startsWith(item.href)
-                      ? "text-paper"
-                      : "text-muted-foreground hover:text-paper"
+                      ? "text-brand-gold"
+                      : "text-brand-white/70 hover:text-brand-gold"
                   )}
                 >
                   {item.label}
@@ -51,10 +54,10 @@ export function AppShell({ children, user }: AppShellProps) {
           </div>
           <div className="flex items-center gap-4">
             <div className="hidden text-right sm:block">
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              <p className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                 {user.role}
               </p>
-              <p className="text-sm text-paper/90">{user.name}</p>
+              <p className="text-sm text-brand-white/90">{user.name}</p>
             </div>
             <Button
               variant="outline"

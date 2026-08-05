@@ -66,9 +66,18 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        ink: "#0A0A0A",
-        paper: "#F5F5F0",
-        hairline: "#2A2A2A",
+        /* Blackline brand aliases (match public-adjuster-v2) */
+        brand: {
+          navy: "#0F1C2E",
+          "navy-deep": "#020617",
+          gold: "#C6A85B",
+          white: "#F4F4F4",
+          slate: "#8B95A5",
+        },
+        /* Legacy aliases used across the app */
+        ink: "#0F1C2E",
+        paper: "#F4F4F4",
+        hairline: "rgba(244, 244, 244, 0.12)",
         denied: "#8B0000",
       },
       boxShadow: {
@@ -79,6 +88,7 @@ const config: Config = {
         lg: "none",
         xl: "none",
         "2xl": "none",
+        gold: "0 0 24px rgba(198, 168, 91, 0.08)",
       },
       keyframes: {
         "fade-in": {
@@ -87,7 +97,7 @@ const config: Config = {
         },
       },
       animation: {
-        "fade-in": "fade-in 0.2s ease-out",
+        "fade-in": "fade-in 0.25s ease-out",
       },
     },
   },

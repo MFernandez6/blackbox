@@ -12,13 +12,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
         position="bottom-right"
         toastOptions={{
           style: {
-            background: "#0A0A0A",
-            border: "1px solid #2A2A2A",
+            background: "#0F1C2E",
+            border: "1px solid rgba(198, 168, 91, 0.35)",
             borderRadius: 0,
-            color: "#F5F5F0",
-            fontFamily: "var(--font-mono)",
-            fontSize: "12px",
-            letterSpacing: "0.06em",
+            color: "#F4F4F4",
+            fontFamily: "var(--font-sans)",
+            fontSize: "11px",
+            fontWeight: 700,
+            letterSpacing: "0.16em",
             textTransform: "uppercase",
           },
         }}

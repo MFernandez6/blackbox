@@ -15,7 +15,7 @@ export function ErrorBanner({ message, onDismiss, className }: ErrorBannerProps)
     <div
       role="alert"
       className={cn(
-        "flex items-start justify-between gap-4 border border-denied bg-denied/15 px-4 py-3 text-sm text-paper",
+        "flex items-start justify-between gap-4 border border-denied bg-denied/15 px-4 py-3 text-sm text-brand-white",
         className
       )}
     >
@@ -24,7 +24,7 @@ export function ErrorBanner({ message, onDismiss, className }: ErrorBannerProps)
         <button
           type="button"
           onClick={onDismiss}
-          className="shrink-0 text-paper/70 hover:text-paper"
+          className="shrink-0 text-brand-white/70 hover:text-brand-white"
           aria-label="Dismiss"
         >
           <X className="h-4 w-4" />

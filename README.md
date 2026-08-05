@@ -46,6 +46,7 @@ All seed adjusters share password: `Password123!`
 |---|---|
 | `diana.reyes@blacklineadjusting.com` | ADMIN |
 | `marcus.chen@blacklineadjusting.com` | ADJUSTER |
+| `frankie@blacklineadjusting.com` | ADJUSTER |
 | `sofia.alvarez@blacklineadjusting.com` | VIEWER |
 
 ## Migrations & seed

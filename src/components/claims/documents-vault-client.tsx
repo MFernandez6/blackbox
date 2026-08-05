@@ -60,9 +60,9 @@ export function DocumentsVaultClient({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">File Integrity</p>
-          <h1 className="mt-1 font-serif text-2xl text-paper">Document Vault</h1>
-          <p className="mt-1 font-mono text-xs tracking-wide text-muted-foreground">
-            <Link href={`/claims/${claimId}`} className="hover:text-paper">
+          <h1 className="mt-1 font-serif text-2xl text-brand-white">Document Vault</h1>
+          <p className="mt-1 font-mono text-xs tracking-wide text-brand-slate">
+            <Link href={`/claims/${claimId}`} className="hover:text-brand-gold">
               {claimNumber}
             </Link>
           </p>
@@ -79,7 +79,7 @@ export function DocumentsVaultClient({
         </div>
       </div>
 
-      <div className="flex items-center gap-4 border border-hairline p-4">
+      <div className="flex items-center gap-4 border border-brand-white/10 p-4">
         <p className="eyebrow shrink-0">Filter by Type</p>
         <Select value={filter} onValueChange={setFilter}>
           <SelectTrigger className="max-w-xs">
@@ -97,9 +97,9 @@ export function DocumentsVaultClient({
       </div>
 
       {filtered.length === 0 ? (
-        <div className="border border-hairline px-6 py-16 text-center">
+        <div className="border border-brand-white/10 px-6 py-16 text-center">
           <p className="eyebrow mb-2">Secure Record</p>
-          <p className="text-sm text-muted-foreground">No documents on file</p>
+          <p className="text-sm text-brand-slate">No documents on file</p>
         </div>
       ) : (
         <>
@@ -113,7 +113,7 @@ export function DocumentsVaultClient({
                     href={d.fileUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="group border border-hairline bg-[#0C0C0C]"
+                    className="group border border-brand-white/10 bg-brand-navy-deep/50"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -121,9 +121,9 @@ export function DocumentsVaultClient({
                       alt={d.fileName}
                       className="aspect-[4/3] w-full object-cover opacity-90 group-hover:opacity-100"
                     />
-                    <div className="border-t border-hairline px-3 py-2">
-                      <p className="truncate text-sm text-paper">{d.fileName}</p>
-                      <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <div className="border-t border-brand-white/10 px-3 py-2">
+                      <p className="truncate text-sm text-brand-white">{d.fileName}</p>
+                      <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                         {format(new Date(d.uploadedAt), "yyyy-MM-dd")} ·{" "}
                         {d.uploaderName}
                       </p>
@@ -135,23 +135,23 @@ export function DocumentsVaultClient({
           ) : null}
 
           {others.length > 0 ? (
-            <section className="border border-hairline">
-              <div className="border-b border-hairline px-4 py-3">
+            <section className="border border-brand-white/10">
+              <div className="border-b border-brand-white/10 px-4 py-3">
                 <p className="eyebrow">Records</p>
               </div>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-hairline text-left">
-                    <th className="px-4 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                  <tr className="border-b border-brand-white/10 text-left">
+                    <th className="px-4 py-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                       File
                     </th>
-                    <th className="px-4 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <th className="px-4 py-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                       Type
                     </th>
-                    <th className="px-4 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <th className="px-4 py-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                       Uploaded
                     </th>
-                    <th className="px-4 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <th className="px-4 py-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                       By
                     </th>
                   </tr>
@@ -160,25 +160,25 @@ export function DocumentsVaultClient({
                   {others.map((d) => (
                     <tr
                       key={d.id}
-                      className="border-b border-hairline last:border-0 hover:bg-[#0F0F0F]"
+                      className="border-b border-brand-white/10 last:border-0 hover:bg-brand-gold/5"
                     >
                       <td className="px-4 py-3">
                         <a
                           href={d.fileUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-paper hover:underline"
+                          className="text-brand-white hover:underline"
                         >
                           {d.fileName}
                         </a>
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                      <td className="px-4 py-3 font-mono text-xs text-brand-slate">
                         {DOC_TYPE_LABELS[d.docType]}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                      <td className="px-4 py-3 font-mono text-xs text-brand-slate">
                         {format(new Date(d.uploadedAt), "yyyy-MM-dd")}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="px-4 py-3 text-brand-slate">
                         {d.uploaderName}
                       </td>
                     </tr>

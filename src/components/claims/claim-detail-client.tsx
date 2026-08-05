@@ -206,22 +206,22 @@ export function ClaimDetailClient({ claim, adjusters, role }: Props) {
       ) : null}
 
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-hairline pb-6">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-brand-white/10 pb-6">
         <div>
           <p className="eyebrow">Secure Record</p>
           <div className="mt-1 flex flex-wrap items-center gap-3">
-            <h1 className="font-mono text-2xl tracking-wide text-paper">
+            <h1 className="font-mono text-2xl tracking-wide text-brand-gold">
               {claim.claimNumber}
             </h1>
             <StatusBadge status={claim.status} />
             {claim.isCatClaim ? (
-              <Badge className="border-hairline text-muted-foreground">CAT</Badge>
+              <Badge className="border-brand-white/10 text-brand-slate">CAT</Badge>
             ) : null}
             {claim.isArchived ? (
               <Badge className="border-denied text-denied">Archived</Badge>
             ) : null}
           </div>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-brand-slate">
             Assigned:{" "}
             {adjusters.find((a) => a.id === claim.assignedAdjusterId)?.name ??
               "Unassigned"}{" "}
@@ -249,11 +249,11 @@ export function ClaimDetailClient({ claim, adjusters, role }: Props) {
         {/* Main column */}
         <div className="space-y-8 lg:col-span-3">
           {/* Claimants */}
-          <section className="border border-hairline p-5">
+          <section className="border border-brand-white/10 p-5">
             <p className="eyebrow mb-4">Claimant Info</p>
             <div className="space-y-6">
               {claimants.map((c, i) => (
-                <div key={c.id || i} className="space-y-3 border-t border-hairline pt-4 first:border-0 first:pt-0">
+                <div key={c.id || i} className="space-y-3 border-t border-brand-white/10 pt-4 first:border-0 first:pt-0">
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Field label="First">
                       <Input
@@ -362,7 +362,7 @@ export function ClaimDetailClient({ claim, adjusters, role }: Props) {
           </section>
 
           {/* Property */}
-          <section className="border border-hairline p-5">
+          <section className="border border-brand-white/10 p-5">
             <p className="eyebrow mb-4">Property & Loss</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Address" className="sm:col-span-2">
@@ -503,7 +503,7 @@ export function ClaimDetailClient({ claim, adjusters, role }: Props) {
           </section>
 
           {/* Documents */}
-          <section className="border border-hairline p-5">
+          <section className="border border-brand-white/10 p-5">
             <div className="mb-4 flex items-center justify-between">
               <p className="eyebrow">Documents on File</p>
               {editable ? (
@@ -515,43 +515,43 @@ export function ClaimDetailClient({ claim, adjusters, role }: Props) {
             {/* AI_HOOK: display extractedData fields
                 here once populated (policy number, date of loss, claimant name cross-check) */}
             {claim.documents.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No documents on file</p>
+              <p className="text-sm text-brand-slate">No documents on file</p>
             ) : (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-hairline text-left">
-                    <th className="pb-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                  <tr className="border-b border-brand-white/10 text-left">
+                    <th className="pb-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                       File
                     </th>
-                    <th className="pb-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <th className="pb-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                       Type
                     </th>
-                    <th className="pb-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <th className="pb-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                       By
                     </th>
-                    <th className="pb-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <th className="pb-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                       Date
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {claim.documents.map((d) => (
-                    <tr key={d.id} className="border-b border-hairline last:border-0">
+                    <tr key={d.id} className="border-b border-brand-white/10 last:border-0">
                       <td className="py-2">
                         <a
                           href={d.fileUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-paper hover:underline"
+                          className="text-brand-white hover:underline"
                         >
                           {d.fileName}
                         </a>
                       </td>
-                      <td className="py-2 font-mono text-xs text-muted-foreground">
+                      <td className="py-2 font-mono text-xs text-brand-slate">
                         {DOC_TYPE_LABELS[d.docType]}
                       </td>
-                      <td className="py-2 text-muted-foreground">{d.uploaderName}</td>
-                      <td className="py-2 font-mono text-xs text-muted-foreground">
+                      <td className="py-2 text-brand-slate">{d.uploaderName}</td>
+                      <td className="py-2 font-mono text-xs text-brand-slate">
                         {format(new Date(d.uploadedAt), "yyyy-MM-dd")}
                       </td>
                     </tr>
@@ -569,29 +569,29 @@ export function ClaimDetailClient({ claim, adjusters, role }: Props) {
 
         {/* Timeline */}
         <aside className="lg:col-span-2">
-          <section className="border border-hairline p-5">
+          <section className="border border-brand-white/10 p-5">
             <p className="eyebrow mb-4">Status Timeline</p>
-            <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+            <p className="mb-4 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
               Chain of custody: unbroken
             </p>
             <ol className="space-y-0">
               {claim.statusHistory.map((h, i) => (
                 <li
                   key={h.id}
-                  className="relative border-l border-hairline pl-4 pb-6 last:pb-0"
+                  className="relative border-l border-brand-white/10 pl-4 pb-6 last:pb-0"
                 >
-                  <span className="absolute -left-[3px] top-1 h-1.5 w-1.5 bg-paper" />
-                  <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                  <span className="absolute -left-[3px] top-1 h-1.5 w-1.5 bg-brand-gold" />
+                  <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                     {format(new Date(h.changedAt), "yyyy-MM-dd HH:mm")}
                   </p>
-                  <p className="mt-1 text-sm text-paper">
+                  <p className="mt-1 text-sm text-brand-white">
                     {h.previousStatus
                       ? `${STATUS_LABELS[h.previousStatus]} → ${STATUS_LABELS[h.newStatus]}`
                       : STATUS_LABELS[h.newStatus]}
                   </p>
-                  <p className="text-xs text-muted-foreground">{h.changedByName}</p>
+                  <p className="text-xs text-brand-slate">{h.changedByName}</p>
                   {h.note ? (
-                    <p className="mt-1 text-sm text-paper/80">{h.note}</p>
+                    <p className="mt-1 text-sm text-brand-white/80">{h.note}</p>
                   ) : null}
                   {i === 0 && claim.statusHistory.length === 1 ? null : null}
                 </li>
@@ -702,44 +702,44 @@ function PaymentPanel({
   }
 
   return (
-    <section className="border border-hairline p-5">
+    <section className="border border-brand-white/10 p-5">
       <p className="eyebrow mb-4">Payment Log — Admin</p>
       {error ? (
         <ErrorBanner message={error} onDismiss={() => setError("")} className="mb-4" />
       ) : null}
       {payments.length === 0 ? (
-        <p className="mb-4 text-sm text-muted-foreground">No payments recorded</p>
+        <p className="mb-4 text-sm text-brand-slate">No payments recorded</p>
       ) : (
         <table className="mb-6 w-full text-sm">
           <thead>
-            <tr className="border-b border-hairline text-left">
-              <th className="pb-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+            <tr className="border-b border-brand-white/10 text-left">
+              <th className="pb-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                 Type
               </th>
-              <th className="pb-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+              <th className="pb-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                 Amount
               </th>
-              <th className="pb-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+              <th className="pb-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                 Date
               </th>
-              <th className="pb-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+              <th className="pb-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                 By
               </th>
             </tr>
           </thead>
           <tbody>
             {payments.map((p) => (
-              <tr key={p.id} className="border-b border-hairline last:border-0">
+              <tr key={p.id} className="border-b border-brand-white/10 last:border-0">
                 <td className="py-2 font-mono text-xs">
                   {PAYMENT_TYPE_LABELS[p.type]}
                 </td>
                 <td className="py-2 font-mono text-xs">
                   {formatCurrency(p.amount)}
                 </td>
-                <td className="py-2 font-mono text-xs text-muted-foreground">
+                <td className="py-2 font-mono text-xs text-brand-slate">
                   {format(new Date(p.date), "yyyy-MM-dd")}
                 </td>
-                <td className="py-2 text-muted-foreground">{p.recordedByName}</td>
+                <td className="py-2 text-brand-slate">{p.recordedByName}</td>
               </tr>
             ))}
           </tbody>

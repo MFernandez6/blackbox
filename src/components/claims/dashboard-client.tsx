@@ -113,8 +113,8 @@ export function DashboardClient({
         <Link
           href={sortLink(col)}
           className={cn(
-            "font-mono text-[10px] uppercase tracking-[0.14em] hover:text-paper",
-            active ? "text-paper" : "text-muted-foreground"
+            "font-sans text-[10px] font-bold uppercase tracking-[0.2em] hover:text-brand-gold",
+            active ? "text-brand-white" : "text-brand-slate"
           )}
         >
           {label}
@@ -129,42 +129,44 @@ export function DashboardClient({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">Claim Status</p>
-          <h1 className="mt-1 font-serif text-2xl text-paper">Active Files</h1>
+          <h1 className="mt-1 font-serif text-2xl font-semibold tracking-[0.06em] text-brand-white">
+            Active Files
+          </h1>
         </div>
         {canCreate ? (
-          <Button asChild>
+          <Button asChild variant="solid">
             <Link href="/claims/new">+ New Claim</Link>
           </Button>
         ) : null}
       </div>
 
       {/* Summary strip */}
-      <div className="grid gap-0 border border-hairline md:grid-cols-3">
-        <div className="border-b border-hairline px-5 py-4 md:border-b-0 md:border-r">
+      <div className="grid gap-0 border border-brand-white/10 md:grid-cols-3">
+        <div className="border-b border-brand-white/10 px-5 py-4 md:border-b-0 md:border-r">
           <p className="eyebrow">Open Pipeline</p>
-          <p className="mt-2 font-mono text-2xl text-paper">{summary.openCount}</p>
+          <p className="mt-2 font-mono text-2xl text-brand-white">{summary.openCount}</p>
         </div>
-        <div className="border-b border-hairline px-5 py-4 md:border-b-0 md:border-r">
+        <div className="border-b border-brand-white/10 px-5 py-4 md:border-b-0 md:border-r">
           <p className="eyebrow">By Status</p>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
             {OPEN_STATUSES.map((s) => (
-              <span key={s} className="font-mono text-[10px] text-muted-foreground">
+              <span key={s} className="font-sans text-[10px] font-bold uppercase tracking-[0.16em] text-brand-slate">
                 {STATUS_LABELS[s]}{" "}
-                <span className="text-paper">{summary.byStatus[s] ?? 0}</span>
+                <span className="text-brand-white">{summary.byStatus[s] ?? 0}</span>
               </span>
             ))}
           </div>
         </div>
         <div className="px-5 py-4">
           <p className="eyebrow">Estimated Value</p>
-          <p className="mt-2 font-mono text-2xl text-paper">
+          <p className="mt-2 font-mono text-2xl text-brand-white">
             {formatCurrency(summary.pipelineValue)}
           </p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="space-y-4 border border-hairline p-4">
+      <div className="space-y-4 border border-brand-white/10 p-4">
         <p className="eyebrow">File Integrity — Filters</p>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2">
@@ -246,10 +248,10 @@ export function DashboardClient({
                 type="button"
                 onClick={() => toggleStatus(s)}
                 className={cn(
-                  "border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em]",
+                  "border px-2 py-1 font-sans text-[10px] font-bold uppercase tracking-[0.2em]",
                   active
-                    ? "border-paper bg-paper text-ink"
-                    : "border-hairline text-muted-foreground hover:border-paper/40"
+                    ? "border-brand-gold bg-brand-gold text-brand-navy"
+                    : "border-brand-white/10 text-brand-slate hover:border-brand-gold/40"
                 )}
               >
                 {STATUS_LABELS[s]}
@@ -262,14 +264,14 @@ export function DashboardClient({
       {/* Table */}
       <div
         className={cn(
-          "border border-hairline overflow-x-auto",
+          "border border-brand-white/10 overflow-x-auto",
           pending && "opacity-60"
         )}
       >
         {claims.length === 0 ? (
           <div className="px-6 py-16 text-center">
             <p className="eyebrow mb-3">Secure Record</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-brand-slate">
               No active files. Begin intake to open the first record.
             </p>
             {canCreate ? (
@@ -280,7 +282,7 @@ export function DashboardClient({
           </div>
         ) : (
           <table className="w-full min-w-[900px] text-sm">
-            <thead className="border-b border-hairline bg-[#0C0C0C]">
+            <thead className="border-b border-brand-white/10 bg-brand-navy-deep/50">
               <tr>
                 <SortHeader col="claimNumber" label="Claim #" />
                 <SortHeader col="claimant" label="Claimant" />
@@ -300,27 +302,27 @@ export function DashboardClient({
               {claims.map((c) => (
                 <tr
                   key={c.id}
-                  className="border-b border-hairline last:border-0 hover:bg-[#0F0F0F]"
+                  className="border-b border-brand-white/10 last:border-0 hover:bg-brand-gold/5"
                 >
                   <td className="px-3 py-3">
                     <Link
                       href={`/claims/${c.id}`}
-                      className="font-mono text-xs tracking-wide text-paper hover:underline"
+                      className="font-mono text-xs tracking-wide text-brand-white hover:underline"
                     >
                       {c.claimNumber}
                     </Link>
                   </td>
-                  <td className="px-3 py-3 text-paper/90">{c.primaryClaimant}</td>
+                  <td className="px-3 py-3 text-brand-white/90">{c.primaryClaimant}</td>
                   <td className="px-3 py-3">
                     <StatusBadge status={c.status} />
                   </td>
-                  <td className="px-3 py-3 font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                  <td className="px-3 py-3 font-mono text-xs uppercase tracking-wider text-brand-slate">
                     {LOSS_TYPE_LABELS[c.lossType]}
                   </td>
-                  <td className="px-3 py-3 font-mono text-xs text-muted-foreground">
+                  <td className="px-3 py-3 font-mono text-xs text-brand-slate">
                     {format(new Date(c.dateOfLoss), "yyyy-MM-dd")}
                   </td>
-                  <td className="px-3 py-3 text-paper/80">
+                  <td className="px-3 py-3 text-brand-white/80">
                     {c.adjusterName ?? "—"}
                   </td>
                   <td className="px-3 py-3 font-mono text-xs">

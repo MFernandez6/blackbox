@@ -108,7 +108,7 @@ export function DocumentUploadDialog({ claimId, open, onOpenChange }: Props) {
 
           <div
             className={`border border-dashed px-4 py-10 text-center transition-colors ${
-              dragging ? "border-paper bg-secondary" : "border-hairline"
+              dragging ? "border-brand-gold bg-secondary" : "border-brand-white/10"
             }`}
             onDragOver={(e) => {
               e.preventDefault();
@@ -123,12 +123,12 @@ export function DocumentUploadDialog({ claimId, open, onOpenChange }: Props) {
             }}
           >
             <p className="eyebrow mb-2">Drop file</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-brand-slate">
               {file ? file.name : "Or select from disk"}
             </p>
             <input
               type="file"
-              className="mt-4 block w-full text-sm text-muted-foreground file:mr-4 file:border file:border-hairline file:bg-ink file:px-3 file:py-1.5 file:font-mono file:text-[10px] file:uppercase file:tracking-[0.12em] file:text-paper"
+              className="mt-4 block w-full text-sm text-brand-slate file:mr-4 file:border file:border-brand-white/10 file:bg-brand-navy file:px-3 file:py-1.5 file:font-sans file:text-[10px] file:uppercase file:tracking-[0.12em] file:text-brand-white"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
           </div>

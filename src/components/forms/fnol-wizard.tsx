@@ -162,9 +162,9 @@ export function FnolWizard() {
 
   if (!hydrated) {
     return (
-      <div className="border border-hairline p-8">
+      <div className="border border-brand-white/10 p-8">
         <p className="eyebrow">Evidence Protocol</p>
-        <p className="mt-2 text-sm text-muted-foreground">Loading draft…</p>
+        <p className="mt-2 text-sm text-brand-slate">Loading draft…</p>
       </div>
     );
   }
@@ -173,20 +173,20 @@ export function FnolWizard() {
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
         <p className="eyebrow">Evidence Protocol</p>
-        <h1 className="mt-1 font-serif text-2xl text-paper">FNOL Intake</h1>
+        <h1 className="mt-1 font-serif text-2xl text-brand-white">FNOL Intake</h1>
       </div>
 
-      <div className="flex flex-wrap gap-6 border-b border-hairline pb-4">
+      <div className="flex flex-wrap gap-6 border-b border-brand-white/10 pb-4">
         {STEPS.map((s, i) => (
           <div key={s.n} className="flex items-baseline gap-2">
             <span
               className={`font-mono text-sm tracking-widest ${
-                i === step ? "text-paper" : "text-muted-foreground"
+                i === step ? "text-brand-gold" : "text-brand-slate"
               }`}
             >
               {s.n}
             </span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+            <span className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
               / 04 — {s.label}
             </span>
           </div>
@@ -200,7 +200,7 @@ export function FnolWizard() {
       {step === 0 && (
         <div className="space-y-6">
           {fields.map((field, index) => (
-            <div key={field.id} className="space-y-4 border border-hairline p-5">
+            <div key={field.id} className="space-y-4 border border-brand-white/10 p-5">
               <div className="flex items-center justify-between">
                 <p className="eyebrow">Claimant {String(index + 1).padStart(2, "0")}</p>
                 {fields.length > 1 ? (
@@ -272,7 +272,7 @@ export function FnolWizard() {
                       }
                     }}
                   />
-                  <Label className="normal-case tracking-normal font-sans text-sm text-paper">
+                  <Label className="normal-case tracking-normal font-sans text-sm text-brand-white">
                     Primary contact
                   </Label>
                 </div>
@@ -300,7 +300,7 @@ export function FnolWizard() {
       )}
 
       {step === 1 && (
-        <div className="space-y-4 border border-hairline p-5">
+        <div className="space-y-4 border border-brand-white/10 p-5">
           <Field label="Property Address" error={form.formState.errors.property?.propertyAddress?.message}>
             <Input {...form.register("property.propertyAddress")} />
           </Field>
@@ -348,7 +348,7 @@ export function FnolWizard() {
           <Field label="Loss Description" error={form.formState.errors.property?.lossDescription?.message}>
             <Textarea rows={4} {...form.register("property.lossDescription")} />
           </Field>
-          <div className="flex items-center gap-2 border-t border-hairline pt-4">
+          <div className="flex items-center gap-2 border-t border-brand-white/10 pt-4">
             <Checkbox
               checked={form.watch("property.isCatClaim")}
               onCheckedChange={(c) =>
@@ -356,10 +356,10 @@ export function FnolWizard() {
               }
             />
             <div>
-              <Label className="normal-case tracking-normal font-sans text-sm text-paper">
+              <Label className="normal-case tracking-normal font-sans text-sm text-brand-white">
                 CAT claim (declared catastrophe)
               </Label>
-              <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+              <p className="mt-1 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                 Contingency: {fee}%
               </p>
             </div>
@@ -368,8 +368,8 @@ export function FnolWizard() {
       )}
 
       {step === 2 && (
-        <div className="space-y-4 border border-hairline p-5">
-          <p className="text-sm text-muted-foreground">
+        <div className="space-y-4 border border-brand-white/10 p-5">
+          <p className="text-sm text-brand-slate">
             Policy and carrier fields may be left blank when unknown at first contact.
           </p>
           <Field label="Policy Number">
@@ -403,14 +403,14 @@ export function FnolWizard() {
           </ReviewBlock>
           <ReviewBlock title="Property & Loss">
             <p className="text-sm">{values.property.propertyAddress}</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-brand-slate">
               {values.property.zipCode} · {values.property.county} ·{" "}
               {LOSS_TYPE_LABELS[values.property.lossType]} · DOL{" "}
               {values.property.dateOfLoss}
               {values.property.isCatClaim ? " · CAT" : ""}
             </p>
             <p className="mt-2 text-sm">{values.property.lossDescription}</p>
-            <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+            <p className="mt-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
               Contingency fee: {fee}%
             </p>
             <Button type="button" variant="ghost" size="sm" className="mt-2" onClick={() => setStep(1)}>
@@ -430,7 +430,7 @@ export function FnolWizard() {
         </div>
       )}
 
-      <div className="flex justify-between border-t border-hairline pt-6">
+      <div className="flex justify-between border-t border-brand-white/10 pt-6">
         <Button
           type="button"
           variant="outline"
@@ -481,7 +481,7 @@ function ReviewBlock({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border border-hairline p-5">
+    <div className="border border-brand-white/10 p-5">
       <p className="eyebrow mb-3">{title}</p>
       {children}
     </div>

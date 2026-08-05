@@ -17,16 +17,16 @@ export const STATUS_LABELS: Record<ClaimStatus, string> = {
   DENIED: "Denied",
 };
 
-/** Tailwind classes for status badges — deep red reserved for DENIED */
+/** Tailwind classes for status badges — deep red reserved for DENIED; gold for active pipeline */
 export const STATUS_BADGE_CLASS: Record<ClaimStatus, string> = {
-  INTAKE: "border-[#2A2A2A] text-[#F5F5F0]/80",
-  UNDER_REVIEW: "border-[#3A3A3A] text-[#F5F5F0]",
-  INVESTIGATION: "border-[#4A4A4A] text-[#F5F5F0]",
-  FILED: "border-[#5A5A5A] text-[#F5F5F0]",
-  NEGOTIATING: "border-[#6A6A6A] text-[#F5F5F0]",
-  SETTLED: "border-[#F5F5F0]/40 text-[#F5F5F0]",
-  CLOSED: "border-[#2A2A2A] text-[#F5F5F0]/50",
-  DENIED: "border-[#8B0000] bg-[#8B0000]/20 text-[#F5F5F0]",
+  INTAKE: "border-brand-white/15 text-brand-white/70",
+  UNDER_REVIEW: "border-brand-gold/30 text-brand-gold/90",
+  INVESTIGATION: "border-brand-gold/45 text-brand-gold",
+  FILED: "border-brand-white/25 text-brand-white",
+  NEGOTIATING: "border-brand-gold/60 bg-brand-gold/10 text-brand-gold",
+  SETTLED: "border-brand-white/40 text-brand-white",
+  CLOSED: "border-brand-white/10 text-brand-slate",
+  DENIED: "border-denied bg-denied/20 text-brand-white",
 };
 
 export const LOSS_TYPE_LABELS: Record<LossType, string> = {

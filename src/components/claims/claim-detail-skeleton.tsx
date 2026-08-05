@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function ClaimDetailSkeleton() {
   return (
     <div className="space-y-8">
-      <div className="flex justify-between border-b border-hairline pb-6">
+      <div className="flex justify-between border-b border-brand-white/10 pb-6">
         <div className="space-y-2">
           <Skeleton className="h-3 w-24" />
           <Skeleton className="h-8 w-48" />

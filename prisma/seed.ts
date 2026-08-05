@@ -127,10 +127,21 @@ async function main() {
     },
   });
 
+  const frankie = await prisma.adjuster.create({
+    data: {
+      name: "Frankie",
+      email: "frankie@blacklineadjusting.com",
+      passwordHash,
+      licenseNumber: "W456789",
+      role: AdjusterRole.ADJUSTER,
+    },
+  });
+
   const adjusterByEmail: Record<string, string> = {
     [diana.email]: diana.id,
     [marcus.email]: marcus.id,
     [sofia.email]: sofia.id,
+    [frankie.email]: frankie.id,
   };
 
   const year = new Date().getFullYear();
@@ -608,9 +619,10 @@ async function main() {
 
   console.log("");
   console.log("Seed complete.");
-  console.log("  Adjusters: 3 (ADMIN / ADJUSTER / VIEWER)");
+  console.log("  Adjusters: 4 (ADMIN / ADJUSTER×2 / VIEWER)");
   console.log(`  Claims:    ${claims.length} (year ${year}, sequence 0001–000${claims.length})`);
   console.log(`  Login:     diana.reyes@blacklineadjusting.com / ${SEED_PASSWORD}`);
+  console.log(`             frankie@blacklineadjusting.com / ${SEED_PASSWORD}`);
 }
 
 main()
