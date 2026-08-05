@@ -15,15 +15,15 @@ export function BlackboxMark({
   return (
     <Tag className={cn("inline-flex items-start", className)}>
       <span>BLACKBOX</span>
-      <sup
+      <span
         className={cn(
-          "ml-0.5 translate-y-[-0.15em] font-sans text-[0.35em] font-bold tracking-normal text-brand-gold/80",
+          "ml-0.5 mt-[0.32em] font-sans text-[0.38em] font-semibold leading-none tracking-normal text-brand-gold/80",
           markClassName
         )}
         aria-label="trademark"
       >
         TM
-      </sup>
+      </span>
     </Tag>
   );
 }
