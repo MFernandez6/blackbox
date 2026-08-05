@@ -53,6 +53,11 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
     where.OR = [
       { claimNumber: { contains: q, mode: "insensitive" } },
       { insurerClaimNumber: { contains: q, mode: "insensitive" } },
+      { policyNumber: { contains: q, mode: "insensitive" } },
+      { carrierName: { contains: q, mode: "insensitive" } },
+      { propertyAddress: { contains: q, mode: "insensitive" } },
+      { county: { contains: q, mode: "insensitive" } },
+      { zipCode: { contains: q, mode: "insensitive" } },
       {
         claimants: {
           some: {
@@ -137,6 +142,7 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
         ? `${primary.firstName} ${primary.lastName}`
         : "—",
       adjusterName: c.assignedAdjuster?.name ?? null,
+      assignedAdjusterId: c.assignedAdjusterId,
     };
   });
 
@@ -169,6 +175,10 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
       }}
       adjusters={adjusters}
       canCreate={canEdit(session.user.role)}
+      canEditClaims={canEdit(session.user.role)}
+      canManage={session.user.role === "ADMIN"}
+      role={session.user.role}
+      currentUserId={session.user.id}
     />
   );
 }

@@ -428,11 +428,7 @@ export async function updateCoverageAction(
 
 /**
  * Parse a certified POLICY document and populate Coverage A–D / exclusions /
- * endorsements on the claim.
- *
- * AI_HOOK: call extraction service with Document.fileUrl, write results to
- * Document.extractedData, set extractionStatus COMPLETE|FAILED, then apply
- * via applyPolicyExtractionToClaim().
+ * endorsements on the claim via Anthropic (ANTHROPIC_API_KEY).
  */
 export async function parsePolicyDocumentAction(
   claimId: string,
@@ -466,18 +462,49 @@ export async function parsePolicyDocumentAction(
       data: { extractionStatus: "PENDING" },
     });
 
-    // AI_HOOK: after upload / on parse, call extraction service and
-    // populate Document.extractedData + set extractionStatus
-    // Expected extractedData shape: PolicyExtractionResult
-    // (coverageALimit–D, policyExclusions, policyEndorsements, policyNumber, carrierName)
-    //
-    // const extracted = await extractionService.parsePolicy(doc.fileUrl)
-    // await prisma.document.update({ where: { id: doc.id }, data: {
-    //   extractedData: extracted, extractionStatus: 'COMPLETE'
-    // }})
-    // await applyPolicyExtractionToClaim(claimId, extracted)
+    // Prefer a fresh AI extraction when a key is configured.
+    if (process.env.ANTHROPIC_API_KEY) {
+      try {
+        const { extractPolicyFromDocument } = await import("@/lib/policy-ai");
+        const extracted = await extractPolicyFromDocument({
+          fileUrl: doc.fileUrl,
+          mimeType: doc.mimeType,
+          fileName: doc.fileName,
+        });
 
-    // If extractedData was already populated (e.g. by a prior pipeline run), apply it.
+        await prisma.document.update({
+          where: { id: doc.id },
+          data: {
+            extractedData: extracted,
+            extractionStatus: "COMPLETE",
+          },
+        });
+        await applyPolicyExtractionToClaim(claimId, extracted);
+        revalidatePath(`/claims/${claimId}`);
+        revalidatePath(`/claims/${claimId}/documents`);
+        return {
+          ok: true,
+          data: {
+            applied: true,
+            message: "Coverage fields populated from AI policy extraction.",
+          },
+        };
+      } catch (extractErr) {
+        console.error(extractErr);
+        const message =
+          extractErr instanceof Error
+            ? extractErr.message
+            : "Policy extraction failed.";
+        await prisma.document.update({
+          where: { id: doc.id },
+          data: { extractionStatus: "FAILED" },
+        });
+        revalidatePath(`/claims/${claimId}`);
+        return { ok: false, error: message };
+      }
+    }
+
+    // Fallback: apply prior extractedData if present (offline / no API key).
     if (isPolicyExtractionResult(doc.extractedData)) {
       await applyPolicyExtractionToClaim(claimId, doc.extractedData);
       await prisma.document.update({
@@ -495,15 +522,15 @@ export async function parsePolicyDocumentAction(
       };
     }
 
+    await prisma.document.update({
+      where: { id: doc.id },
+      data: { extractionStatus: "FAILED" },
+    });
     revalidatePath(`/claims/${claimId}`);
-    revalidatePath(`/claims/${claimId}/documents`);
     return {
-      ok: true,
-      data: {
-        applied: false,
-        message:
-          "Policy queued for extraction (PENDING). AI_HOOK not connected this phase — enter Coverage A–D manually or wire the extraction service.",
-      },
+      ok: false,
+      error:
+        "ANTHROPIC_API_KEY is not configured. Set it in .env / Vercel to enable Parse Policy, or enter Coverage A–D manually.",
     };
   } catch (e) {
     console.error(e);

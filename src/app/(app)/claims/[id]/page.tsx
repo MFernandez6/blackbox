@@ -7,10 +7,21 @@ import {
   type ClaimDetailData,
 } from "@/components/claims/claim-detail-client";
 import { ClaimDetailSkeleton } from "@/components/claims/claim-detail-skeleton";
+import type { CarrierExpertInput } from "@/lib/schemas/claim";
 
 export const dynamic = "force-dynamic";
 
-async function ClaimDetailData({ id }: { id: string }) {
+function isoDate(value: Date | null | undefined): string | null {
+  return value ? value.toISOString() : null;
+}
+
+async function ClaimDetailDataLoader({
+  id,
+  tab,
+}: {
+  id: string;
+  tab?: string;
+}) {
   const session = await getSession();
   if (!session) redirect("/login");
 
@@ -29,6 +40,22 @@ async function ClaimDetailData({ id }: { id: string }) {
       payments: {
         orderBy: { date: "desc" },
         include: { recordedBy: { select: { name: true } } },
+      },
+      contacts: { orderBy: { createdAt: "desc" } },
+      tasks: {
+        orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }],
+        include: {
+          assignedTo: { select: { name: true } },
+          createdBy: { select: { name: true } },
+        },
+      },
+      notes: {
+        orderBy: { createdAt: "desc" },
+        include: { createdBy: { select: { name: true } } },
+      },
+      emails: {
+        orderBy: { emailDate: "desc" },
+        include: { createdBy: { select: { name: true } } },
       },
     },
   });
@@ -68,7 +95,7 @@ async function ClaimDetailData({ id }: { id: string }) {
     fieldAdjusterPhone: claim.fieldAdjusterPhone,
     fieldAdjusterEmail: claim.fieldAdjusterEmail,
     experts: Array.isArray(claim.experts)
-      ? (claim.experts as ClaimDetailData["experts"])
+      ? (claim.experts as CarrierExpertInput[])
       : [],
     coverageALimit: claim.coverageALimit?.toString() ?? null,
     coverageBLimit: claim.coverageBLimit?.toString() ?? null,
@@ -77,11 +104,24 @@ async function ClaimDetailData({ id }: { id: string }) {
     policyExclusions: claim.policyExclusions,
     policyEndorsements: claim.policyEndorsements,
     coverageAnalysis: claim.coverageAnalysis,
-    policyParsedAt: claim.policyParsedAt?.toISOString() ?? null,
+    policyParsedAt: isoDate(claim.policyParsedAt),
     estimatedValue: claim.estimatedValue?.toString() ?? null,
+    demandAmount: claim.demandAmount?.toString() ?? null,
+    demandSentDate: isoDate(claim.demandSentDate),
+    rcvAmount: claim.rcvAmount?.toString() ?? null,
+    acvAmount: claim.acvAmount?.toString() ?? null,
+    settlementAmount: claim.settlementAmount?.toString() ?? null,
+    settlementDate: isoDate(claim.settlementDate),
+    settlementNotes: claim.settlementNotes,
     isCatClaim: claim.isCatClaim,
     contingencyFeePercent: claim.contingencyFeePercent.toString(),
     assignedAdjusterId: claim.assignedAdjusterId,
+    initialContactDate: isoDate(claim.initialContactDate),
+    scheduledAppointmentDate: isoDate(claim.scheduledAppointmentDate),
+    lossInspectedDate: isoDate(claim.lossInspectedDate),
+    estimateCreatedDate: isoDate(claim.estimateCreatedDate),
+    reportCreatedDate: isoDate(claim.reportCreatedDate),
+    estimateSentDate: isoDate(claim.estimateSentDate),
     isArchived: claim.isArchived,
     createdAt: claim.createdAt.toISOString(),
     claimants: claim.claimants.map((c) => ({
@@ -106,6 +146,7 @@ async function ClaimDetailData({ id }: { id: string }) {
       id: d.id,
       fileName: d.fileName,
       fileUrl: d.fileUrl,
+      mimeType: d.mimeType,
       docType: d.docType,
       uploadedAt: d.uploadedAt.toISOString(),
       uploaderName: d.uploadedBy.name,
@@ -119,6 +160,43 @@ async function ClaimDetailData({ id }: { id: string }) {
       note: p.note,
       recordedByName: p.recordedBy.name,
     })),
+    contacts: claim.contacts.map((c) => ({
+      id: c.id,
+      kind: c.kind,
+      name: c.name,
+      company: c.company,
+      phone: c.phone,
+      email: c.email,
+      notes: c.notes,
+    })),
+    tasks: claim.tasks.map((t) => ({
+      id: t.id,
+      title: t.title,
+      description: t.description,
+      status: t.status,
+      dueDate: isoDate(t.dueDate),
+      assignedToId: t.assignedToId,
+      assignedToName: t.assignedTo?.name ?? null,
+      createdByName: t.createdBy.name,
+      createdAt: t.createdAt.toISOString(),
+    })),
+    notes: claim.notes.map((n) => ({
+      id: n.id,
+      body: n.body,
+      createdByName: n.createdBy.name,
+      createdAt: n.createdAt.toISOString(),
+    })),
+    emails: claim.emails.map((e) => ({
+      id: e.id,
+      direction: e.direction,
+      subject: e.subject,
+      fromAddress: e.fromAddress,
+      toAddress: e.toAddress,
+      ccAddress: e.ccAddress,
+      body: e.body,
+      emailDate: e.emailDate.toISOString(),
+      createdByName: e.createdBy.name,
+    })),
   };
 
   return (
@@ -126,18 +204,21 @@ async function ClaimDetailData({ id }: { id: string }) {
       claim={data}
       adjusters={adjusters}
       role={session.user.role}
+      initialTab={tab}
     />
   );
 }
 
 export default function ClaimDetailPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams: { tab?: string };
 }) {
   return (
     <Suspense fallback={<ClaimDetailSkeleton />}>
-      <ClaimDetailData id={params.id} />
+      <ClaimDetailDataLoader id={params.id} tab={searchParams.tab} />
     </Suspense>
   );
 }

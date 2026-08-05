@@ -11,7 +11,7 @@
  * (bcrypt cost 10 — change immediately in any shared environment)
  */
 
-import { PrismaClient, ClaimStatus, LossType, PreferredContactMethod, DocType, PaymentType, AdjusterRole } from "@prisma/client";
+import { PrismaClient, ClaimStatus, LossType, PreferredContactMethod, DocType, PaymentType, AdjusterRole, ContactKind, TaskStatus, EmailDirection } from "@prisma/client";
 import { hash } from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -92,7 +92,8 @@ type SeedClaimInput = {
 };
 
 function claimNumber(year: number, sequence: number): string {
-  return `BB-${year}-${String(sequence).padStart(4, "0")}`;
+  const yy = String(year).slice(-2);
+  return `BL-${yy}-${String(sequence).padStart(4, "0")}`;
 }
 
 function daysAgo(n: number): Date {
@@ -106,6 +107,10 @@ async function main() {
   console.log("BLACKBOX seed — clearing existing records…");
 
   // Order respects onDelete: Restrict
+  await prisma.claimEmail.deleteMany();
+  await prisma.claimNote.deleteMany();
+  await prisma.claimTask.deleteMany();
+  await prisma.claimContact.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.document.deleteMany();
   await prisma.statusHistory.deleteMany();
@@ -730,6 +735,79 @@ async function main() {
             },
           });
         }
+      }
+
+      // Sample workspace rows on first file (tabs demo)
+      if (input.sequence === 1) {
+        await tx.claim.update({
+          where: { id: claim.id },
+          data: {
+            initialContactDate: daysAgo(11),
+            scheduledAppointmentDate: daysAgo(8),
+            lossInspectedDate: daysAgo(7),
+            estimateCreatedDate: daysAgo(4),
+            reportCreatedDate: daysAgo(3),
+            estimateSentDate: daysAgo(2),
+          },
+        });
+
+        await tx.claimContact.create({
+          data: {
+            claimId: claim.id,
+            kind: ContactKind.MITIGATION,
+            name: "Carlos Ruiz",
+            company: "DryFast Restoration",
+            phone: "(305) 555-0199",
+            email: "cruiz@dryfast.example",
+            notes: "Emergency water mitigation — on site day of loss.",
+            createdById: createdById,
+          },
+        });
+
+        await tx.claimTask.create({
+          data: {
+            claimId: claim.id,
+            title: "Request certified policy declarations",
+            description: "Obtain HO-3 with forms schedule from insured.",
+            status: TaskStatus.IN_PROGRESS,
+            dueDate: daysAgo(-3),
+            assignedToId: createdById,
+            createdById: createdById,
+          },
+        });
+
+        await tx.claimTask.create({
+          data: {
+            claimId: claim.id,
+            title: "Schedule re-inspection with desk",
+            status: TaskStatus.OPEN,
+            dueDate: daysAgo(-7),
+            assignedToId: adjusterByEmail[marcus.email],
+            createdById: createdById,
+          },
+        });
+
+        await tx.claimNote.create({
+          data: {
+            claimId: claim.id,
+            body: "Spoke with insured — cabinets swollen, laminate cupping in kitchen and adjacent bath. Photos uploaded to vault.",
+            createdById: createdById,
+            createdAt: daysAgo(6),
+          },
+        });
+
+        await tx.claimEmail.create({
+          data: {
+            claimId: claim.id,
+            direction: EmailDirection.OUTBOUND,
+            subject: `FNOL acknowledgment — ${number}`,
+            fromAddress: "miguel.fernandez@blacklineadjusting.com",
+            toAddress: "claims@citizens.example",
+            body: "Please confirm receipt of FNOL and assign desk examiner. Loss photos and mitigation invoice to follow.",
+            emailDate: daysAgo(10),
+            createdById: createdById,
+          },
+        });
       }
     });
 

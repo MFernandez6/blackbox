@@ -1,9 +1,9 @@
-import type { PrismaClient, Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
-type Tx = Prisma.TransactionClient | PrismaClient;
+type Tx = Prisma.TransactionClient;
 
 /**
- * Atomically allocate the next BB-YYYY-#### claim number for the given year.
+ * Atomically allocate the next BL-YY-#### claim number for the given year.
  * Must be called inside the same transaction that creates the Claim.
  */
 export async function allocateClaimNumber(
@@ -15,6 +15,6 @@ export async function allocateClaimNumber(
     create: { year, lastValue: 1 },
     update: { lastValue: { increment: 1 } },
   });
-
-  return `BB-${year}-${String(row.lastValue).padStart(4, "0")}`;
+  const yy = String(year).slice(-2);
+  return `BL-${yy}-${String(row.lastValue).padStart(4, "0")}`;
 }

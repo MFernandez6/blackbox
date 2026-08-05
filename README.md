@@ -65,6 +65,10 @@ npm run db:seed
 
 Seed config lives in `package.json` → `prisma.seed`.
 
+## AI policy extraction
+
+Coverage Protocol **Parse Policy** uses Anthropic when `ANTHROPIC_API_KEY` is set (local `.env` / Vercel). Without a key, enter Coverage A–D manually. Optional: `ANTHROPIC_POLICY_MODEL`.
+
 ## Contingency fee rule
 
 - Standard claims: **20%**
@@ -74,7 +78,7 @@ Applied on FNOL create and when toggling CAT on the claim detail.
 
 ## Claim numbers
 
-Format `BB-YYYY-####`, sequential per calendar year via `ClaimNumberSequence` (transaction-safe upsert + increment). Never random.
+Format `BL-YY-####` (e.g. `BL-26-0005`), sequential per calendar year via `ClaimNumberSequence` (transaction-safe upsert + increment). Never random.
 
 ## Status changes
 
@@ -88,14 +92,9 @@ Format `BB-YYYY-####`, sequential per calendar year via `ClaimNumberSequence` (t
 | ADJUSTER | Edit own/assigned claims; no payment log |
 | VIEWER | Read-only; edit controls hidden |
 
-## AI_HOOK placeholders (do not wire APIs yet)
+## AI_HOOK / extraction
 
-This phase is CMS core only. Intentionally unused / stubbed:
-
-1. **`Document.extractedData` / `extractionStatus`** — POLICY uploads set `PENDING`.
-2. **Upload handler** + **`parsePolicyDocumentAction`** — AI_HOOK to call extraction and populate Coverage A–D / exclusions / endorsements via `PolicyExtractionResult` (`src/lib/policy-extraction.ts`).
-3. **Claim detail Coverage Protocol** — Upload Certified Policy → Parse Policy; manual edit always available.
-4. **Document list** — AI_HOOK to display extractedData cross-checks once populated.
+Policy parse is wired to Anthropic (`src/lib/policy-ai.ts`). Document list may still show extraction status badges; cross-check UI for extractedData remains light until payloads are routinely populated.
 
 ## Visual language
 

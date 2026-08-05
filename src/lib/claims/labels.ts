@@ -4,6 +4,9 @@ import type {
   DocType,
   PaymentType,
   PreferredContactMethod,
+  ContactKind,
+  TaskStatus,
+  EmailDirection,
 } from "@prisma/client";
 
 export const STATUS_LABELS: Record<ClaimStatus, string> = {
@@ -58,6 +61,27 @@ export const CONTACT_METHOD_LABELS: Record<PreferredContactMethod, string> = {
   EMAIL: "Email",
   PHONE: "Phone",
   TEXT: "Text",
+};
+
+export const CONTACT_KIND_LABELS: Record<ContactKind, string> = {
+  VENDOR: "Vendor",
+  CONTRACTOR: "Contractor",
+  MITIGATION: "Mitigation",
+  ENGINEER: "Engineer",
+  ATTORNEY: "Attorney",
+  OTHER: "Other",
+};
+
+export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  OPEN: "Open",
+  IN_PROGRESS: "In Progress",
+  DONE: "Done",
+  CANCELLED: "Cancelled",
+};
+
+export const EMAIL_DIRECTION_LABELS: Record<EmailDirection, string> = {
+  INBOUND: "Inbound",
+  OUTBOUND: "Outbound",
 };
 
 export const OPEN_STATUSES: ClaimStatus[] = [

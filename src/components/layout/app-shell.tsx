@@ -22,7 +22,7 @@ export function AppShell({ children, user }: AppShellProps) {
 
   return (
     <div className="min-h-screen bg-brand-navy text-brand-white">
-      <header className="border-b border-brand-white/5 bg-brand-navy/90 backdrop-blur-md">
+      <header className="no-print border-b border-brand-white/5 bg-brand-navy/90 backdrop-blur-md">
         <div className="mx-auto flex h-20 max-w-[1400px] items-center justify-between gap-6 px-6">
           <div className="flex items-center gap-10">
             <Link href="/dashboard" className="group shrink-0">
@@ -68,7 +68,12 @@ export function AppShell({ children, user }: AppShellProps) {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-[1400px] px-6 py-8 animate-fade-in">
+      <main
+        className={cn(
+          "mx-auto max-w-[1400px] px-6 py-8 animate-fade-in",
+          pathname.includes("/print") && "print:max-w-none print:px-0 print:py-0"
+        )}
+      >
         {children}
       </main>
     </div>

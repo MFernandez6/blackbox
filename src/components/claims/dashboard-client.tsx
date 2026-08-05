@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback, useTransition } from "react";
-import type { ClaimStatus, LossType } from "@prisma/client";
+import { useCallback, useState, useTransition } from "react";
+import { toast } from "sonner";
+import type { AdjusterRole, ClaimStatus, LossType } from "@prisma/client";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -21,6 +23,11 @@ import {
   STATUS_LABELS,
   OPEN_STATUSES,
 } from "@/lib/claims/labels";
+import {
+  bulkArchiveClaimsAction,
+  assignClaimAdjusterAction,
+  bulkAssignClaimsAction,
+} from "@/lib/actions/dashboard";
 import { cn, daysOpen, formatCurrency } from "@/lib/utils";
 
 export type DashboardClaimRow = {
@@ -35,6 +42,7 @@ export type DashboardClaimRow = {
   createdAt: string;
   primaryClaimant: string;
   adjusterName: string | null;
+  assignedAdjusterId: string | null;
 };
 
 export type DashboardSummary = {
@@ -50,6 +58,10 @@ type Props = {
   summary: DashboardSummary;
   adjusters: AdjusterOption[];
   canCreate: boolean;
+  canEditClaims: boolean;
+  canManage: boolean;
+  role: AdjusterRole;
+  currentUserId: string;
 };
 
 const ALL_STATUSES = Object.keys(STATUS_LABELS) as ClaimStatus[];
@@ -60,11 +72,15 @@ export function DashboardClient({
   summary,
   adjusters,
   canCreate,
+  canEditClaims,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkAdjuster, setBulkAdjuster] = useState<string>("");
+  const [busy, setBusy] = useState(false);
 
   const setParam = useCallback(
     (key: string, value: string | null) => {
@@ -90,6 +106,70 @@ export function DashboardClient({
   const dir = searchParams.get("dir") ?? "desc";
   const selectedStatuses =
     searchParams.get("status")?.split(",").filter(Boolean) ?? [];
+
+  const allSelected = claims.length > 0 && selected.size === claims.length;
+  const someSelected = selected.size > 0;
+
+  function toggleAll(checked: boolean) {
+    setSelected(checked ? new Set(claims.map((c) => c.id)) : new Set());
+  }
+
+  function toggleOne(id: string, checked: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  async function handleBulkArchive() {
+    if (!someSelected) return;
+    if (
+      !confirm(
+        `Archive ${selected.size} selected file${selected.size === 1 ? "" : "s"}? Records will be retained.`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    const result = await bulkArchiveClaimsAction(Array.from(selected));
+    setBusy(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(`${result.data.count} file${result.data.count === 1 ? "" : "s"} archived`);
+    setSelected(new Set());
+    router.refresh();
+  }
+
+  async function handleBulkAssign() {
+    if (!someSelected || !bulkAdjuster) return;
+    setBusy(true);
+    const adjusterId = bulkAdjuster === "none" ? null : bulkAdjuster;
+    const result = await bulkAssignClaimsAction(Array.from(selected), adjusterId);
+    setBusy(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(`${result.data.count} file${result.data.count === 1 ? "" : "s"} reassigned`);
+    setSelected(new Set());
+    setBulkAdjuster("");
+    router.refresh();
+  }
+
+  async function handleRowAssign(claimId: string, value: string) {
+    const adjusterId = value === "none" ? null : value;
+    const result = await assignClaimAdjusterAction(claimId, adjusterId);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success("Adjuster updated");
+    router.refresh();
+  }
 
   function sortLink(col: string) {
     const nextDir = sort === col && dir === "desc" ? "asc" : "desc";
@@ -174,7 +254,7 @@ export function DashboardClient({
             <Label>Search</Label>
             <Input
               defaultValue={searchParams.get("q") ?? ""}
-              placeholder="BL #, NI #, or claimant"
+              placeholder="BL #, NI #, claimant, policy, carrier, address…"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   setParam("q", (e.target as HTMLInputElement).value || null);
@@ -262,11 +342,50 @@ export function DashboardClient({
         </div>
       </div>
 
+      {canEditClaims && someSelected ? (
+        <div className="no-print flex flex-wrap items-center gap-3 border border-brand-gold/30 bg-brand-gold/5 px-4 py-3">
+          <p className="eyebrow text-brand-gold">
+            {selected.size} selected
+          </p>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={busy}
+            onClick={handleBulkArchive}
+          >
+            Archive selected
+          </Button>
+          <div className="flex items-center gap-2">
+            <Select value={bulkAdjuster} onValueChange={setBulkAdjuster}>
+              <SelectTrigger className="h-8 w-[160px]">
+                <SelectValue placeholder="Assign to…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Unassigned</SelectItem>
+                {adjusters.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy || !bulkAdjuster}
+              onClick={handleBulkAssign}
+            >
+              Assign selected
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {/* Table */}
       <div
         className={cn(
           "border border-brand-white/10 overflow-x-auto",
-          pending && "opacity-60"
+          (pending || busy) && "opacity-60"
         )}
       >
         {claims.length === 0 ? (
@@ -282,9 +401,18 @@ export function DashboardClient({
             ) : null}
           </div>
         ) : (
-          <table className="w-full min-w-[1000px] text-sm">
+          <table className="w-full min-w-[1100px] text-sm">
             <thead className="border-b border-brand-white/10 bg-brand-navy-deep/50">
               <tr>
+                {canEditClaims ? (
+                  <th className="w-10 px-2 py-3">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={(c) => toggleAll(!!c)}
+                      aria-label="Select all"
+                    />
+                  </th>
+                ) : null}
                 <SortHeader col="claimNumber" label="BL Claim #" />
                 <SortHeader col="insurerClaimNumber" label="NI Claim #" />
                 <SortHeader col="claimant" label="Claimant" />
@@ -306,7 +434,16 @@ export function DashboardClient({
                   key={c.id}
                   className="border-b border-brand-white/10 last:border-0 hover:bg-brand-gold/5"
                 >
-                  <td className="px-3 py-3">
+                  {canEditClaims ? (
+                    <td className="px-2 py-2">
+                      <Checkbox
+                        checked={selected.has(c.id)}
+                        onCheckedChange={(checked) => toggleOne(c.id, !!checked)}
+                        aria-label={`Select ${c.claimNumber}`}
+                      />
+                    </td>
+                  ) : null}
+                  <td className="px-3 py-2">
                     <Link
                       href={`/claims/${c.id}`}
                       className="font-mono text-xs tracking-wide text-brand-gold hover:underline"
@@ -314,26 +451,47 @@ export function DashboardClient({
                       {c.claimNumber}
                     </Link>
                   </td>
-                  <td className="px-3 py-3 font-mono text-xs text-brand-white/80">
+                  <td className="px-3 py-2 font-mono text-xs text-brand-white/80">
                     {c.insurerClaimNumber ?? "—"}
                   </td>
-                  <td className="px-3 py-3 text-brand-white/90">{c.primaryClaimant}</td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-2 text-brand-white/90">{c.primaryClaimant}</td>
+                  <td className="px-3 py-2">
                     <StatusBadge status={c.status} />
                   </td>
-                  <td className="px-3 py-3 font-mono text-xs uppercase tracking-wider text-brand-slate">
+                  <td className="px-3 py-2 font-mono text-xs uppercase tracking-wider text-brand-slate">
                     {LOSS_TYPE_LABELS[c.lossType]}
                   </td>
-                  <td className="px-3 py-3 font-mono text-xs text-brand-slate">
+                  <td className="px-3 py-2 font-mono text-xs text-brand-slate">
                     {format(new Date(c.dateOfLoss), "yyyy-MM-dd")}
                   </td>
-                  <td className="px-3 py-3 text-brand-white/80">
-                    {c.adjusterName ?? "—"}
+                  <td className="px-3 py-2">
+                    {canEditClaims ? (
+                      <Select
+                        value={c.assignedAdjusterId ?? "none"}
+                        onValueChange={(v) => handleRowAssign(c.id, v)}
+                      >
+                        <SelectTrigger className="h-7 min-w-[120px] border-brand-white/10 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Unassigned</SelectItem>
+                          {adjusters.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="text-brand-white/80">
+                        {c.adjusterName ?? "—"}
+                      </span>
+                    )}
                   </td>
-                  <td className="px-3 py-3 font-mono text-xs">
+                  <td className="px-3 py-2 font-mono text-xs">
                     {daysOpen(c.createdAt)}
                   </td>
-                  <td className="px-3 py-3 text-right font-mono text-xs">
+                  <td className="px-3 py-2 text-right font-mono text-xs">
                     {formatCurrency(c.estimatedValue)}
                   </td>
                 </tr>

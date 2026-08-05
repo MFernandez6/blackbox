@@ -78,11 +78,32 @@ enum PaymentType {
   FEE
 }
 
+enum ContactKind {
+  VENDOR
+  CONTRACTOR
+  MITIGATION
+  ENGINEER
+  ATTORNEY
+  OTHER
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum EmailDirection {
+  INBOUND
+  OUTBOUND
+}
+
 // ---------------------------------------------------------------------------
-// Claim number sequence (BB-YYYY-####)
+// Claim number sequence (BL-YY-####)
 // Transaction-safe per-year counter. Application code must increment
 // `lastValue` inside the same transaction that creates the Claim.
-// Format: BB-{year}-{lastValue padded to 4 digits}, e.g. BB-2026-0001
+// Format: BL-{yy}-{lastValue padded to 4 digits}, e.g. BL-26-0001
 // ---------------------------------------------------------------------------
 
 model ClaimNumberSequence {
@@ -110,6 +131,11 @@ model Adjuster {
   uploadedDocs   Document[]      @relation("DocumentUploader")
   statusChanges  StatusHistory[] @relation("StatusChangedBy")
   payments       Payment[]       @relation("PaymentRecordedBy")
+  tasksAssigned  ClaimTask[]     @relation("TaskAssignee")
+  tasksCreated   ClaimTask[]     @relation("TaskCreator")
+  notesCreated   ClaimNote[]     @relation("NoteAuthor")
+  emailsLogged   ClaimEmail[]    @relation("EmailLoggedBy")
+  contactsAdded  ClaimContact[]  @relation("ContactCreator")
 }
 
 // ---------------------------------------------------------------------------
@@ -121,7 +147,7 @@ model Adjuster {
 
 model Claim {
   id                     String      @id @default(cuid())
-  /// Format BB-YYYY-#### — Blackline (BL) claim number, generated via sequence
+  /// Format BL-YY-#### — Blackline (BL) claim number, generated via sequence
   claimNumber            String      @unique
   /// Carrier / Named Insured claim number (NI Claim #) — often unknown at intake
   insurerClaimNumber     String?
@@ -162,6 +188,18 @@ model Claim {
   /// When coverage fields were last populated from a parsed policy document
   policyParsedAt         DateTime?
   estimatedValue         Decimal?    @db.Decimal(14, 2)
+  /// Formal demand package amount submitted to carrier
+  demandAmount           Decimal?    @db.Decimal(14, 2)
+  demandSentDate         DateTime?   @db.Date
+  /// Replacement Cost Value (estimate)
+  rcvAmount              Decimal?    @db.Decimal(14, 2)
+  /// Actual Cash Value (estimate)
+  acvAmount              Decimal?    @db.Decimal(14, 2)
+  /// Agreed / accepted settlement amount
+  settlementAmount       Decimal?    @db.Decimal(14, 2)
+  settlementDate         DateTime?   @db.Date
+  /// Notes on demand / settlement posture
+  settlementNotes        String?     @db.Text
   /// True when loss arises from a declared catastrophe / emergency event
   isCatClaim             Boolean     @default(false)
   /// Firm contingency: 20% standard, 10% when isCatClaim (FL PA fee cap on CAT)
@@ -169,6 +207,13 @@ model Claim {
   /// rely on the schema default alone when isCatClaim is true.
   contingencyFeePercent  Decimal     @default(20.00) @db.Decimal(5, 2)
   assignedAdjusterId     String?
+  /// Claim dates (ops calendar — separate from dateOfLoss)
+  initialContactDate        DateTime? @db.Date
+  scheduledAppointmentDate  DateTime? @db.Date
+  lossInspectedDate         DateTime? @db.Date
+  estimateCreatedDate       DateTime? @db.Date
+  reportCreatedDate         DateTime? @db.Date
+  estimateSentDate          DateTime? @db.Date
   isArchived             Boolean     @default(false)
   createdAt              DateTime    @default(now())
   updatedAt              DateTime    @updatedAt
@@ -178,6 +223,10 @@ model Claim {
   documents        Document[]
   statusHistory    StatusHistory[]
   payments         Payment[]
+  contacts         ClaimContact[]
+  tasks            ClaimTask[]
+  notes            ClaimNote[]
+  emails           ClaimEmail[]
 
   @@index([status])
   @@index([assignedAdjusterId])
@@ -281,4 +330,95 @@ model Payment {
 
   @@index([claimId])
   @@index([recordedById])
+}
+
+// ---------------------------------------------------------------------------
+// ClaimContact — vendors / third parties (insureds live on Claimant;
+// desk/field/experts remain on Claim)
+// ---------------------------------------------------------------------------
+
+model ClaimContact {
+  id          String      @id @default(cuid())
+  claimId     String
+  kind        ContactKind @default(VENDOR)
+  name        String
+  company     String?
+  phone       String?
+  email       String?
+  notes       String?     @db.Text
+  createdById String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  claim     Claim    @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  createdBy Adjuster @relation("ContactCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([claimId])
+  @@index([kind])
+}
+
+// ---------------------------------------------------------------------------
+// ClaimTask — assignable work items on a file
+// ---------------------------------------------------------------------------
+
+model ClaimTask {
+  id           String     @id @default(cuid())
+  claimId      String
+  title        String
+  description  String?    @db.Text
+  status       TaskStatus @default(OPEN)
+  dueDate      DateTime?  @db.Date
+  assignedToId String?
+  createdById  String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  claim      Claim     @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  assignedTo Adjuster? @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: Restrict)
+  createdBy  Adjuster  @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([claimId, status])
+  @@index([assignedToId])
+  @@index([dueDate])
+}
+
+// ---------------------------------------------------------------------------
+// ClaimNote — dated journal entries (Activity → Notes)
+// ---------------------------------------------------------------------------
+
+model ClaimNote {
+  id          String   @id @default(cuid())
+  claimId     String
+  body        String   @db.Text
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  claim     Claim    @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  createdBy Adjuster @relation("NoteAuthor", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([claimId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// ClaimEmail — saved correspondence log (not a live mailbox)
+// ---------------------------------------------------------------------------
+
+model ClaimEmail {
+  id           String         @id @default(cuid())
+  claimId      String
+  direction    EmailDirection @default(OUTBOUND)
+  subject      String
+  fromAddress  String
+  toAddress    String
+  ccAddress    String?
+  body         String         @db.Text
+  emailDate    DateTime
+  createdById  String
+  createdAt    DateTime       @default(now())
+
+  claim     Claim    @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  createdBy Adjuster @relation("EmailLoggedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([claimId, emailDate])
 }

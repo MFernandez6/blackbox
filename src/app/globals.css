@@ -89,4 +89,40 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  .no-print {
+    @apply print:hidden;
+  }
+}
+
+@media print {
+  header,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .print-sheet {
+    color: black !important;
+  }
+
+  .print-sheet .text-brand-white,
+  .print-sheet .text-brand-white\/90,
+  .print-sheet .text-brand-gold,
+  .print-sheet .text-brand-slate {
+    color: black !important;
+  }
+
+  .print-sheet .border-brand-white\/10 {
+    border-color: rgba(0, 0, 0, 0.2) !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
 }
