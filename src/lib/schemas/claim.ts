@@ -112,6 +112,15 @@ export const claimantUpdateSchema = claimantSchema.extend({
   id: z.string().optional(),
 });
 
+export const moneyOptionalSchema = z
+  .union([z.string(), z.number(), z.null()])
+  .optional()
+  .transform((v) => {
+    if (v === null || v === undefined || v === "") return null;
+    const n = typeof v === "string" ? Number(v.replace(/,/g, "")) : v;
+    return Number.isNaN(n) ? null : n;
+  });
+
 export const claimDetailUpdateSchema = z.object({
   propertyAddress: z.string().min(1),
   zipCode: z.string().min(5),
@@ -132,6 +141,18 @@ export const claimDetailUpdateSchema = z.object({
   estimatedValue: z.union([z.string(), z.number(), z.null()]).optional(),
   isCatClaim: z.boolean(),
   assignedAdjusterId: z.string().nullable().optional(),
+});
+
+export const coverageUpdateSchema = z.object({
+  coverageALimit: moneyOptionalSchema,
+  coverageBLimit: moneyOptionalSchema,
+  coverageCLimit: moneyOptionalSchema,
+  coverageDLimit: moneyOptionalSchema,
+  policyExclusions: z.string().nullable().optional(),
+  policyEndorsements: z.string().nullable().optional(),
+  coverageAnalysis: z.string().nullable().optional(),
+  policyNumber: z.string().nullable().optional(),
+  carrierName: z.string().nullable().optional(),
 });
 
 export const documentUploadMetaSchema = z.object({

@@ -145,6 +145,22 @@ model Claim {
   fieldAdjusterEmail     String?
   /// Carrier / IA experts — JSON array of { name, firm?, specialty?, phone?, email? }
   experts                Json?
+  /// HO Coverage A — Dwelling
+  coverageALimit         Decimal?    @db.Decimal(14, 2)
+  /// HO Coverage B — Other Structures
+  coverageBLimit         Decimal?    @db.Decimal(14, 2)
+  /// HO Coverage C — Personal Property
+  coverageCLimit         Decimal?    @db.Decimal(14, 2)
+  /// HO Coverage D — Loss of Use / ALE
+  coverageDLimit         Decimal?    @db.Decimal(14, 2)
+  /// Policy exclusions (narrative or listed text from certified policy)
+  policyExclusions       String?     @db.Text
+  /// Policy endorsements / forms schedule
+  policyEndorsements     String?     @db.Text
+  /// Coverage analysis — how limits/exclusions/endorsements apply to this loss
+  coverageAnalysis       String?     @db.Text
+  /// When coverage fields were last populated from a parsed policy document
+  policyParsedAt         DateTime?
   estimatedValue         Decimal?    @db.Decimal(14, 2)
   /// True when loss arises from a declared catastrophe / emergency event
   isCatClaim             Boolean     @default(false)

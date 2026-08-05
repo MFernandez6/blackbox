@@ -89,13 +89,12 @@ Format `BB-YYYY-####`, sequential per calendar year via `ClaimNumberSequence` (t
 
 ## AI_HOOK placeholders (do not wire APIs yet)
 
-This phase is CMS core only. Intentionally unused:
+This phase is CMS core only. Intentionally unused / stubbed:
 
-1. **`Document.extractedData` / `extractionStatus`** — schema fields reserved for future extraction.
-2. **Upload handler** (`src/app/api/upload/route.ts` + `registerDocumentAction`) — comment:
-   `// AI_HOOK: after upload, call extraction service and populate Document.extractedData + set extractionStatus`
-3. **Claim detail document list** — comment:
-   `// AI_HOOK: display extractedData fields here once populated (policy number, date of loss, claimant name cross-check)`
+1. **`Document.extractedData` / `extractionStatus`** — POLICY uploads set `PENDING`.
+2. **Upload handler** + **`parsePolicyDocumentAction`** — AI_HOOK to call extraction and populate Coverage A–D / exclusions / endorsements via `PolicyExtractionResult` (`src/lib/policy-extraction.ts`).
+3. **Claim detail Coverage Protocol** — Upload Certified Policy → Parse Policy; manual edit always available.
+4. **Document list** — AI_HOOK to display extractedData cross-checks once populated.
 
 ## Visual language
 

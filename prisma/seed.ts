@@ -44,6 +44,13 @@ type SeedClaimInput = {
     phone?: string | null;
     email?: string | null;
   }>;
+  coverageALimit?: string | null;
+  coverageBLimit?: string | null;
+  coverageCLimit?: string | null;
+  coverageDLimit?: string | null;
+  policyExclusions?: string | null;
+  policyEndorsements?: string | null;
+  coverageAnalysis?: string | null;
   estimatedValue?: string | null;
   isCatClaim?: boolean;
   /** Defaults: 20% standard, 10% when isCatClaim */
@@ -217,6 +224,16 @@ async function main() {
           email: "apierce@gce-eng.com",
         },
       ],
+      coverageALimit: "420000.00",
+      coverageBLimit: "42000.00",
+      coverageCLimit: "210000.00",
+      coverageDLimit: "84000.00",
+      policyExclusions:
+        "Flood; earth movement; ordinance or law (limited); wear and tear; intentional loss.",
+      policyEndorsements:
+        "HO 04 94 — Limited Fungi; HO 04 16 — Premises Alarm; Roof Surfacing Payment Schedule.",
+      coverageAnalysis:
+        "Wind peril appears within Coverage A. Secondary water likely follows as ensuing loss if wind created the opening. Confirm Roof Surfacing endorsement for ACV vs RCV on covering.",
       estimatedValue: "185000.00",
       isCatClaim: true,
       contingencyFeePercent: "10.00",
@@ -623,6 +640,13 @@ async function main() {
           fieldAdjusterPhone: input.fieldAdjusterPhone ?? null,
           fieldAdjusterEmail: input.fieldAdjusterEmail ?? null,
           experts: input.experts ?? undefined,
+          coverageALimit: input.coverageALimit ?? null,
+          coverageBLimit: input.coverageBLimit ?? null,
+          coverageCLimit: input.coverageCLimit ?? null,
+          coverageDLimit: input.coverageDLimit ?? null,
+          policyExclusions: input.policyExclusions ?? null,
+          policyEndorsements: input.policyEndorsements ?? null,
+          coverageAnalysis: input.coverageAnalysis ?? null,
           estimatedValue: input.estimatedValue ?? null,
           isCatClaim: input.isCatClaim ?? false,
           contingencyFeePercent:

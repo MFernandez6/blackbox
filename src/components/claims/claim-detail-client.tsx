@@ -32,6 +32,7 @@ import {
 import { StatusBadge } from "@/components/claims/status-badge";
 import { DocumentUploadDialog } from "@/components/claims/document-upload-dialog";
 import { GoogleMapsButton } from "@/components/claims/google-maps-button";
+import { PolicyCoveragePanel } from "@/components/claims/policy-coverage-panel";
 import type { CarrierExpertInput } from "@/lib/schemas/claim";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +76,14 @@ export type ClaimDetailData = {
   fieldAdjusterPhone: string | null;
   fieldAdjusterEmail: string | null;
   experts: CarrierExpertInput[];
+  coverageALimit: string | null;
+  coverageBLimit: string | null;
+  coverageCLimit: string | null;
+  coverageDLimit: string | null;
+  policyExclusions: string | null;
+  policyEndorsements: string | null;
+  coverageAnalysis: string | null;
+  policyParsedAt: string | null;
   estimatedValue: string | null;
   isCatClaim: boolean;
   contingencyFeePercent: string;
@@ -106,6 +115,7 @@ export type ClaimDetailData = {
     docType: DocType;
     uploadedAt: string;
     uploaderName: string;
+    extractionStatus: string;
     // AI_HOOK: display extractedData fields
     // here once populated (policy number, date of loss, claimant name cross-check)
   }>;
@@ -770,6 +780,33 @@ export function ClaimDetailClient({ claim, adjusters, role }: Props) {
               </Button>
             ) : null}
           </section>
+
+          <PolicyCoveragePanel
+            claimId={claim.id}
+            editable={editable}
+            policyParsedAt={claim.policyParsedAt}
+            initial={{
+              coverageALimit: claim.coverageALimit ?? "",
+              coverageBLimit: claim.coverageBLimit ?? "",
+              coverageCLimit: claim.coverageCLimit ?? "",
+              coverageDLimit: claim.coverageDLimit ?? "",
+              policyExclusions: claim.policyExclusions ?? "",
+              policyEndorsements: claim.policyEndorsements ?? "",
+              coverageAnalysis: claim.coverageAnalysis ?? "",
+              policyNumber: claim.policyNumber ?? "",
+              carrierName: claim.carrierName ?? "",
+            }}
+            policyDocs={claim.documents
+              .filter((d) => d.docType === "POLICY")
+              .map((d) => ({
+                id: d.id,
+                fileName: d.fileName,
+                fileUrl: d.fileUrl,
+                docType: d.docType,
+                uploadedAt: d.uploadedAt,
+                extractionStatus: d.extractionStatus,
+              }))}
+          />
 
           {/* Documents */}
           <section className="border border-brand-white/10 p-5">

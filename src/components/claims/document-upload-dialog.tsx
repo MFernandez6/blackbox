@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { DocType } from "@prisma/client";
@@ -27,15 +27,30 @@ type Props = {
   claimId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Prefill doc type (e.g. POLICY for certified copy upload) */
+  defaultDocType?: DocType;
 };
 
-export function DocumentUploadDialog({ claimId, open, onOpenChange }: Props) {
+export function DocumentUploadDialog({
+  claimId,
+  open,
+  onOpenChange,
+  defaultDocType,
+}: Props) {
   const router = useRouter();
   const [docType, setDocType] = useState<DocType | "">("");
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setDocType(defaultDocType ?? "");
+      setFile(null);
+      setError("");
+    }
+  }, [open, defaultDocType]);
 
   async function upload() {
     setError("");
@@ -62,7 +77,11 @@ export function DocumentUploadDialog({ claimId, open, onOpenChange }: Props) {
         return;
       }
 
-      toast.success("Document lodged in vault");
+      toast.success(
+        docType === "POLICY"
+          ? "Certified policy lodged — run Parse Policy to populate Coverage A–D"
+          : "Document lodged in vault"
+      );
       setFile(null);
       setDocType("");
       onOpenChange(false);

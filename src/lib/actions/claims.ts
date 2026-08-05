@@ -10,16 +10,31 @@ import {
   fnolIntakeSchema,
   statusChangeSchema,
   claimDetailUpdateSchema,
+  coverageUpdateSchema,
   paymentCreateSchema,
   claimantSchema,
   type FnolIntakeInput,
   type StatusChangeInput,
   type ClaimDetailUpdateInput,
 } from "@/lib/schemas/claim";
+import {
+  isPolicyExtractionResult,
+  type PolicyExtractionResult,
+} from "@/lib/policy-extraction";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: string };
+
+function toDecimal(
+  value: string | number | null | undefined
+): Prisma.Decimal | null {
+  if (value === null || value === undefined || value === "") return null;
+  const n =
+    typeof value === "string" ? Number(value.replace(/,/g, "")) : value;
+  if (Number.isNaN(n)) return null;
+  return new Prisma.Decimal(n);
+}
 
 export async function createClaimAction(
   raw: FnolIntakeInput
@@ -198,15 +213,9 @@ export async function updateClaimDetailAction(
 
     const d = parsed.data;
     const fee = contingencyForCat(d.isCatClaim);
-
-    let estimatedValue: Prisma.Decimal | null = null;
-    if (d.estimatedValue !== null && d.estimatedValue !== undefined && d.estimatedValue !== "") {
-      const n =
-        typeof d.estimatedValue === "string"
-          ? Number(d.estimatedValue.replace(/,/g, ""))
-          : d.estimatedValue;
-      if (!Number.isNaN(n)) estimatedValue = new Prisma.Decimal(n);
-    }
+    const estimatedValue = toDecimal(
+      d.estimatedValue as string | number | null | undefined
+    );
 
     await prisma.claim.update({
       where: { id: claimId },
@@ -349,6 +358,9 @@ export async function registerDocumentAction(input: {
 
     // AI_HOOK: after upload, call extraction service and
     // populate Document.extractedData + set extractionStatus
+    // For certified POLICY copies, mark PENDING so Parse Policy can run.
+    const extractionStatus =
+      input.docType === "POLICY" ? "PENDING" : "NOT_APPLICABLE";
 
     const doc = await prisma.document.create({
       data: {
@@ -359,7 +371,7 @@ export async function registerDocumentAction(input: {
         mimeType: input.mimeType,
         docType: input.docType as never,
         uploadedById: session.user.id,
-        extractionStatus: "NOT_APPLICABLE",
+        extractionStatus,
       },
     });
 
@@ -370,4 +382,153 @@ export async function registerDocumentAction(input: {
     console.error(e);
     return { ok: false, error: "Document registration failed." };
   }
+}
+
+export async function updateCoverageAction(
+  claimId: string,
+  raw: unknown
+): Promise<ActionResult> {
+  try {
+    const session = await requireSession();
+    if (!canEdit(session.user.role)) {
+      return { ok: false, error: "Insufficient privileges to edit." };
+    }
+
+    const parsed = coverageUpdateSchema.safeParse(raw);
+    if (!parsed.success) {
+      return {
+        ok: false,
+        error: parsed.error.errors[0]?.message ?? "Validation failed.",
+      };
+    }
+
+    const d = parsed.data;
+    await prisma.claim.update({
+      where: { id: claimId },
+      data: {
+        coverageALimit: toDecimal(d.coverageALimit),
+        coverageBLimit: toDecimal(d.coverageBLimit),
+        coverageCLimit: toDecimal(d.coverageCLimit),
+        coverageDLimit: toDecimal(d.coverageDLimit),
+        policyExclusions: d.policyExclusions || null,
+        policyEndorsements: d.policyEndorsements || null,
+        coverageAnalysis: d.coverageAnalysis || null,
+        policyNumber: d.policyNumber || null,
+        carrierName: d.carrierName || null,
+      },
+    });
+
+    revalidatePath(`/claims/${claimId}`);
+    return { ok: true, data: undefined };
+  } catch (e) {
+    console.error(e);
+    return { ok: false, error: "Coverage update failed." };
+  }
+}
+
+/**
+ * Parse a certified POLICY document and populate Coverage A–D / exclusions /
+ * endorsements on the claim.
+ *
+ * AI_HOOK: call extraction service with Document.fileUrl, write results to
+ * Document.extractedData, set extractionStatus COMPLETE|FAILED, then apply
+ * via applyPolicyExtractionToClaim().
+ */
+export async function parsePolicyDocumentAction(
+  claimId: string,
+  documentId?: string
+): Promise<ActionResult<{ applied: boolean; message: string }>> {
+  try {
+    const session = await requireSession();
+    if (!canEdit(session.user.role)) {
+      return { ok: false, error: "Insufficient privileges to parse policy." };
+    }
+
+    const doc = documentId
+      ? await prisma.document.findFirst({
+          where: { id: documentId, claimId, docType: "POLICY" },
+        })
+      : await prisma.document.findFirst({
+          where: { claimId, docType: "POLICY" },
+          orderBy: { uploadedAt: "desc" },
+        });
+
+    if (!doc) {
+      return {
+        ok: false,
+        error:
+          "No certified policy on file. Upload a POLICY document first, then parse.",
+      };
+    }
+
+    await prisma.document.update({
+      where: { id: doc.id },
+      data: { extractionStatus: "PENDING" },
+    });
+
+    // AI_HOOK: after upload / on parse, call extraction service and
+    // populate Document.extractedData + set extractionStatus
+    // Expected extractedData shape: PolicyExtractionResult
+    // (coverageALimit–D, policyExclusions, policyEndorsements, policyNumber, carrierName)
+    //
+    // const extracted = await extractionService.parsePolicy(doc.fileUrl)
+    // await prisma.document.update({ where: { id: doc.id }, data: {
+    //   extractedData: extracted, extractionStatus: 'COMPLETE'
+    // }})
+    // await applyPolicyExtractionToClaim(claimId, extracted)
+
+    // If extractedData was already populated (e.g. by a prior pipeline run), apply it.
+    if (isPolicyExtractionResult(doc.extractedData)) {
+      await applyPolicyExtractionToClaim(claimId, doc.extractedData);
+      await prisma.document.update({
+        where: { id: doc.id },
+        data: { extractionStatus: "COMPLETE" },
+      });
+      revalidatePath(`/claims/${claimId}`);
+      revalidatePath(`/claims/${claimId}/documents`);
+      return {
+        ok: true,
+        data: {
+          applied: true,
+          message: "Coverage fields populated from existing extraction payload.",
+        },
+      };
+    }
+
+    revalidatePath(`/claims/${claimId}`);
+    revalidatePath(`/claims/${claimId}/documents`);
+    return {
+      ok: true,
+      data: {
+        applied: false,
+        message:
+          "Policy queued for extraction (PENDING). AI_HOOK not connected this phase — enter Coverage A–D manually or wire the extraction service.",
+      },
+    };
+  } catch (e) {
+    console.error(e);
+    return { ok: false, error: "Policy parse failed." };
+  }
+}
+
+/** Apply a PolicyExtractionResult onto Claim coverage / policy fields. */
+export async function applyPolicyExtractionToClaim(
+  claimId: string,
+  extracted: PolicyExtractionResult
+): Promise<void> {
+  await prisma.claim.update({
+    where: { id: claimId },
+    data: {
+      policyNumber: extracted.policyNumber || undefined,
+      carrierName: extracted.carrierName || undefined,
+      coverageALimit: toDecimal(extracted.coverageALimit),
+      coverageBLimit: toDecimal(extracted.coverageBLimit),
+      coverageCLimit: toDecimal(extracted.coverageCLimit),
+      coverageDLimit: toDecimal(extracted.coverageDLimit),
+      policyExclusions: extracted.policyExclusions || undefined,
+      policyEndorsements: extracted.policyEndorsements || undefined,
+      coverageAnalysis: extracted.coverageAnalysis || undefined,
+      policyParsedAt: new Date(),
+    },
+  });
 }

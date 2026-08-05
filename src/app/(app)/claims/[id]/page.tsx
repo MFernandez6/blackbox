@@ -70,6 +70,14 @@ async function ClaimDetailData({ id }: { id: string }) {
     experts: Array.isArray(claim.experts)
       ? (claim.experts as ClaimDetailData["experts"])
       : [],
+    coverageALimit: claim.coverageALimit?.toString() ?? null,
+    coverageBLimit: claim.coverageBLimit?.toString() ?? null,
+    coverageCLimit: claim.coverageCLimit?.toString() ?? null,
+    coverageDLimit: claim.coverageDLimit?.toString() ?? null,
+    policyExclusions: claim.policyExclusions,
+    policyEndorsements: claim.policyEndorsements,
+    coverageAnalysis: claim.coverageAnalysis,
+    policyParsedAt: claim.policyParsedAt?.toISOString() ?? null,
     estimatedValue: claim.estimatedValue?.toString() ?? null,
     isCatClaim: claim.isCatClaim,
     contingencyFeePercent: claim.contingencyFeePercent.toString(),
@@ -101,6 +109,7 @@ async function ClaimDetailData({ id }: { id: string }) {
       docType: d.docType,
       uploadedAt: d.uploadedAt.toISOString(),
       uploaderName: d.uploadedBy.name,
+      extractionStatus: d.extractionStatus,
     })),
     payments: claim.payments.map((p) => ({
       id: p.id,
