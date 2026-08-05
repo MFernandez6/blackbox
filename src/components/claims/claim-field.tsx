@@ -10,7 +10,7 @@ export function ClaimField({
   className?: string;
 }) {
   return (
-    <div className={`space-y-2 ${className ?? ""}`}>
+    <div className={`min-w-0 space-y-2 ${className ?? ""}`}>
       <Label>{label}</Label>
       {children}
     </div>

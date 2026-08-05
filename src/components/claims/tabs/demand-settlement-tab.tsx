@@ -99,7 +99,7 @@ export function DemandSettlementTab({
         <ErrorBanner message={error} onDismiss={() => setError("")} />
       ) : null}
 
-      <section className="border border-brand-white/10 p-5">
+      <section className="border border-brand-white/10 p-4 sm:p-5">
         <p className="eyebrow mb-4">Demand Package</p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <ClaimField label="Demand Amount">
@@ -137,7 +137,7 @@ export function DemandSettlementTab({
         </div>
       </section>
 
-      <section className="border border-brand-white/10 p-5">
+      <section className="border border-brand-white/10 p-4 sm:p-5">
         <p className="eyebrow mb-4">Settlement Tracking</p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <ClaimField label="Settlement Amount">
@@ -172,7 +172,7 @@ export function DemandSettlementTab({
         ) : null}
       </section>
 
-      <section className="border border-brand-white/10 p-5">
+      <section className="border border-brand-white/10 p-4 sm:p-5">
         <p className="eyebrow mb-4">Fee Calc Summary</p>
         <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryStat
@@ -215,7 +215,7 @@ export function DemandSettlementTab({
       {paymentsOk ? (
         <PaymentPanel claimId={claim.id} payments={claim.payments} />
       ) : (
-        <section className="border border-brand-white/10 p-5">
+        <section className="border border-brand-white/10 p-4 sm:p-5">
           <p className="eyebrow mb-4">Payment Log</p>
           <p className="text-sm text-brand-slate">
             Payment entries are restricted to administrators. Fee figures above
@@ -301,7 +301,7 @@ function PaymentPanel({
   }
 
   return (
-    <section className="border border-brand-white/10 p-5">
+    <section className="border border-brand-white/10 p-4 sm:p-5">
       <p className="eyebrow mb-4">Payment Log — Admin</p>
       {error ? (
         <ErrorBanner message={error} onDismiss={() => setError("")} className="mb-4" />
@@ -309,7 +309,8 @@ function PaymentPanel({
       {payments.length === 0 ? (
         <p className="mb-4 text-sm text-brand-slate">No payments recorded</p>
       ) : (
-        <table className="mb-6 w-full text-sm">
+        <div className="overflow-x-auto">
+          <table className="mb-6 w-full min-w-[480px] text-sm">
           <thead>
             <tr className="border-b border-brand-white/10 text-left">
               <th className="pb-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
@@ -343,8 +344,9 @@ function PaymentPanel({
             ))}
           </tbody>
         </table>
+        </div>
       )}
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Select value={type} onValueChange={(v) => setType(v as PaymentType)}>
           <SelectTrigger>
             <SelectValue />

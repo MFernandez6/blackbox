@@ -113,7 +113,7 @@ export function PolicyCoveragePanel({
   }
 
   return (
-    <section className="border border-brand-white/10 p-5">
+    <section className="border border-brand-white/10 p-4 sm:p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="eyebrow">Coverage Protocol</p>
@@ -300,7 +300,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-2">
+    <div className="min-w-0 space-y-2">
       <Label>{label}</Label>
       {children}
     </div>

@@ -301,7 +301,7 @@ export function DashboardClient({
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid gap-2 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>DOL From</Label>
               <Input
@@ -355,9 +355,9 @@ export function DashboardClient({
           >
             Archive selected
           </Button>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select value={bulkAdjuster} onValueChange={setBulkAdjuster}>
-              <SelectTrigger className="h-8 w-[160px]">
+              <SelectTrigger className="h-8 w-full min-w-0 sm:w-[160px]">
                 <SelectValue placeholder="Assign to…" />
               </SelectTrigger>
               <SelectContent>
@@ -470,7 +470,7 @@ export function DashboardClient({
                         value={c.assignedAdjusterId ?? "none"}
                         onValueChange={(v) => handleRowAssign(c.id, v)}
                       >
-                        <SelectTrigger className="h-7 min-w-[120px] border-brand-white/10 text-xs">
+                        <SelectTrigger className="h-7 w-full min-w-0 border-brand-white/10 text-xs sm:min-w-[120px] sm:w-auto">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

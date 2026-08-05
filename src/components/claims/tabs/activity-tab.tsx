@@ -54,7 +54,7 @@ export function ActivityTab({ claim, editable }: ClaimWorkspaceProps) {
       ) : null}
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <section className="border border-brand-white/10 p-5">
+        <section className="border border-brand-white/10 p-4 sm:p-5">
           <p className="eyebrow mb-4">Notes</p>
           {claim.notes.length === 0 ? (
             <p className="mb-4 text-sm text-brand-slate">No notes on file</p>
@@ -103,7 +103,7 @@ export function ActivityTab({ claim, editable }: ClaimWorkspaceProps) {
           ) : null}
         </section>
 
-        <section className="border border-brand-white/10 p-5">
+        <section className="border border-brand-white/10 p-4 sm:p-5">
           <p className="eyebrow mb-4">History</p>
           <p className="mb-4 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
             Chain of custody: unbroken

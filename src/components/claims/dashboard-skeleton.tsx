@@ -10,9 +10,9 @@ export function DashboardSkeleton() {
         </div>
         <Skeleton className="h-10 w-32" />
       </div>
-      <div className="grid grid-cols-3 gap-0 border border-brand-white/10">
-        <Skeleton className="h-24 border-r border-brand-white/10" />
-        <Skeleton className="h-24 border-r border-brand-white/10" />
+      <div className="grid grid-cols-1 gap-0 border border-brand-white/10 md:grid-cols-3">
+        <Skeleton className="h-24 border-b border-brand-white/10 md:border-b-0 md:border-r" />
+        <Skeleton className="h-24 border-b border-brand-white/10 md:border-b-0 md:border-r" />
         <Skeleton className="h-24" />
       </div>
       <Skeleton className="h-40 w-full" />

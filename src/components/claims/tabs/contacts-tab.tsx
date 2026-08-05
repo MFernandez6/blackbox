@@ -175,7 +175,7 @@ export function ContactsTab({ claim, editable }: ClaimWorkspaceProps) {
         <ErrorBanner message={error} onDismiss={() => setError("")} />
       ) : null}
 
-      <section className="border border-brand-white/10 p-5">
+      <section className="border border-brand-white/10 p-4 sm:p-5">
         <p className="eyebrow mb-4">Claimants</p>
         <div className="space-y-6">
           {claimants.map((c, i) => (
@@ -240,7 +240,7 @@ export function ContactsTab({ claim, editable }: ClaimWorkspaceProps) {
                   />
                 </ClaimField>
               </div>
-              <div className="flex flex-wrap items-center gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
                 <Select
                   disabled={!editable}
                   value={c.preferredContactMethod}
@@ -253,7 +253,7 @@ export function ContactsTab({ claim, editable }: ClaimWorkspaceProps) {
                     setClaimants(next);
                   }}
                 >
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-full sm:w-40">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -290,14 +290,14 @@ export function ContactsTab({ claim, editable }: ClaimWorkspaceProps) {
         ) : null}
       </section>
 
-      <section className="border border-brand-white/10 p-5">
+      <section className="border border-brand-white/10 p-4 sm:p-5">
         <p className="eyebrow mb-4">Carrier Contacts</p>
         <div className="space-y-6">
           <div>
             <p className="mb-3 font-sans text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold">
               Desk Examiner
             </p>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-3">
               <ClaimField label="Name">
                 <Input
                   disabled={!editable}
@@ -331,7 +331,7 @@ export function ContactsTab({ claim, editable }: ClaimWorkspaceProps) {
             <p className="mb-3 font-sans text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold">
               Field Adjuster
             </p>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-3">
               <ClaimField label="Name">
                 <Input
                   disabled={!editable}
@@ -476,7 +476,7 @@ export function ContactsTab({ claim, editable }: ClaimWorkspaceProps) {
         ) : null}
       </section>
 
-      <section className="border border-brand-white/10 p-5">
+      <section className="border border-brand-white/10 p-4 sm:p-5">
         <p className="eyebrow mb-4">Vendors & Third Parties</p>
         {claim.contacts.length === 0 ? (
           <p className="mb-4 text-sm text-brand-slate">No vendor contacts on file</p>
@@ -487,7 +487,7 @@ export function ContactsTab({ claim, editable }: ClaimWorkspaceProps) {
                 key={c.id}
                 className="flex flex-wrap items-start justify-between gap-3 border border-brand-white/10 p-3"
               >
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-brand-white">
                     {c.name}
                     {c.company ? (

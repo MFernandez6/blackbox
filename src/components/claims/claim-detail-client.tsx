@@ -144,7 +144,7 @@ export function ClaimDetailClient({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       {error ? (
         <ErrorBanner message={error} onDismiss={() => setError("")} />
       ) : null}
@@ -221,22 +221,32 @@ export function ClaimDetailClient({
             </dl>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
             <GoogleMapsButton
               address={claim.propertyAddress}
               zipCode={claim.zipCode}
+              className="w-full sm:w-auto"
             />
-            <Button asChild size="sm" variant="outline">
+            <Button asChild size="sm" variant="outline" className="w-full sm:w-auto">
               <Link href={`/claims/${claim.id}/print`} target="_blank">
                 Print sheet
               </Link>
             </Button>
             {editable && !claim.isArchived ? (
               <>
-                <Button size="sm" onClick={() => setStatusOpen(true)}>
+                <Button
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  onClick={() => setStatusOpen(true)}
+                >
                   Change Status
                 </Button>
-                <Button size="sm" variant="destructive" onClick={archive}>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="w-full sm:w-auto"
+                  onClick={archive}
+                >
                   Archive
                 </Button>
               </>

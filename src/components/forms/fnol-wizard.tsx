@@ -404,7 +404,7 @@ export function FnolWizard() {
           </div>
           <div className="border-t border-brand-white/10 pt-4">
             <p className="eyebrow mb-3">Desk Examiner</p>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-3">
               <Field label="Name">
                 <Input {...form.register("policy.deskExaminerName")} />
               </Field>
@@ -418,7 +418,7 @@ export function FnolWizard() {
           </div>
           <div className="border-t border-brand-white/10 pt-4">
             <p className="eyebrow mb-3">Field Adjuster</p>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-3">
               <Field label="Name">
                 <Input {...form.register("policy.fieldAdjusterName")} />
               </Field>
@@ -491,7 +491,7 @@ export function FnolWizard() {
         </div>
       )}
 
-      <div className="flex justify-between border-t border-brand-white/10 pt-6">
+      <div className="flex flex-col gap-3 border-t border-brand-white/10 pt-6 sm:flex-row sm:justify-between">
         <Button
           type="button"
           variant="outline"
@@ -526,7 +526,7 @@ function Field({
   className?: string;
 }) {
   return (
-    <div className={`space-y-2 ${className ?? ""}`}>
+    <div className={`min-w-0 space-y-2 ${className ?? ""}`}>
       <Label>{label}</Label>
       {children}
       {error ? <p className="text-xs text-denied">{error}</p> : null}

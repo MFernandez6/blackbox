@@ -83,7 +83,7 @@ export function TasksTab({ claim, adjusters, editable }: ClaimWorkspaceProps) {
         <ErrorBanner message={error} onDismiss={() => setError("")} />
       ) : null}
 
-      <section className="border border-brand-white/10 p-5">
+      <section className="border border-brand-white/10 p-4 sm:p-5">
         <p className="eyebrow mb-4">Tasks</p>
         {claim.tasks.length === 0 ? (
           <p className="mb-4 text-sm text-brand-slate">No tasks on file</p>
@@ -113,7 +113,7 @@ export function TasksTab({ claim, adjusters, editable }: ClaimWorkspaceProps) {
                     value={t.status}
                     onValueChange={(v) => updateStatus(t.id, v as TaskStatus)}
                   >
-                    <SelectTrigger className="w-36">
+                    <SelectTrigger className="w-full min-w-0 sm:w-36">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

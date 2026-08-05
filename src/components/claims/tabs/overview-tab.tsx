@@ -112,7 +112,7 @@ export function OverviewTab({ claim, adjusters, editable }: ClaimWorkspaceProps)
         <ErrorBanner message={error} onDismiss={() => setError("")} />
       ) : null}
 
-      <section className="border border-brand-white/10 p-5">
+      <section className="border border-brand-white/10 p-4 sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <p className="eyebrow">Summary</p>
           <GoogleMapsButton
@@ -251,7 +251,7 @@ export function OverviewTab({ claim, adjusters, editable }: ClaimWorkspaceProps)
         ) : null}
       </section>
 
-      <section className="border border-brand-white/10 p-5">
+      <section className="border border-brand-white/10 p-4 sm:p-5">
         <p className="eyebrow mb-4">Policy Details</p>
         <div className="mb-6 grid gap-3 sm:grid-cols-2">
           <ClaimField label="Policy #">

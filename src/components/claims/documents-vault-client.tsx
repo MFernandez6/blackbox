@@ -172,8 +172,8 @@ export function DocumentsVaultClient({
           })}
         </div>
 
-        <div className="flex flex-wrap items-end gap-4 pt-2">
-          <div className="min-w-[200px] flex-1 space-y-1">
+        <div className="flex flex-col gap-4 pt-2 sm:flex-row sm:flex-wrap sm:items-end">
+          <div className="min-w-0 flex-1 space-y-1">
             <p className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
               Search filename
             </p>
@@ -184,12 +184,12 @@ export function DocumentsVaultClient({
               className="h-8 text-sm"
             />
           </div>
-          <div className="space-y-1">
+          <div className="w-full space-y-1 sm:w-auto">
             <p className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
               Sort
             </p>
             <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-              <SelectTrigger className="h-8 w-[140px]">
+              <SelectTrigger className="h-8 w-full sm:w-[140px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

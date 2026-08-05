@@ -63,7 +63,7 @@ export function DatesTab({ claim, editable }: ClaimWorkspaceProps) {
         <ErrorBanner message={error} onDismiss={() => setError("")} />
       ) : null}
 
-      <section className="border border-brand-white/10 p-5">
+      <section className="border border-brand-white/10 p-4 sm:p-5">
         <p className="eyebrow mb-4">Claim Dates</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <ClaimField label="Initial Contact">
