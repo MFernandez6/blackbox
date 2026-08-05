@@ -198,13 +198,27 @@ export function ClaimDetailClient({
               <HeroMeta label="Policy #" value={claim.policyNumber || "—"} />
             </dl>
 
-            <p className="mt-3 font-serif text-sm text-brand-slate">
-              {LOSS_TYPE_LABELS[claim.lossType]} · {claim.propertyAddress} ·{" "}
-              Assigned:{" "}
-              {adjusters.find((a) => a.id === claim.assignedAdjusterId)?.name ??
-                "Unassigned"}{" "}
-              · Fee {claim.contingencyFeePercent}%
-            </p>
+            <dl className="mt-4 space-y-2">
+              <HeroMeta
+                label="Loss Type"
+                value={LOSS_TYPE_LABELS[claim.lossType]}
+              />
+              <HeroMeta
+                label="Risk Address"
+                value={claim.propertyAddress}
+              />
+              <HeroMeta
+                label="Adjuster Assigned"
+                value={
+                  adjusters.find((a) => a.id === claim.assignedAdjusterId)
+                    ?.name ?? "Unassigned"
+                }
+              />
+              <HeroMeta
+                label="Fee"
+                value={`${claim.contingencyFeePercent}%`}
+              />
+            </dl>
           </div>
 
           <div className="flex flex-wrap gap-2">
