@@ -152,34 +152,38 @@ export function ClaimDetailClient({
       {/* Hero */}
       <div className="border-b border-brand-white/10 pb-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <p className="eyebrow">Secure Record</p>
+          <div className="min-w-0 flex-1 font-serif">
+            <p className="font-serif text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
+              Secure Record
+            </p>
             <div className="mt-2 flex flex-wrap items-end gap-x-6 gap-y-3">
               <div>
-                <p className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
+                <p className="font-serif text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                   BL Claim #
                 </p>
-                <h1 className="font-mono text-lg tracking-wide text-brand-gold">
+                <h1 className="font-serif text-lg tracking-wide text-brand-gold">
                   {claim.claimNumber}
                 </h1>
               </div>
               <div>
-                <p className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
+                <p className="font-serif text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                   NI Claim #
                 </p>
-                <p className="font-mono text-lg tracking-wide text-brand-white">
+                <p className="font-serif text-lg tracking-wide text-brand-white">
                   {claim.insurerClaimNumber || "—"}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2 pb-0.5">
-                <StatusBadge status={claim.status} />
+                <StatusBadge status={claim.status} className="font-serif" />
                 {claim.isCatClaim ? (
-                  <Badge className="border-brand-white/10 text-brand-slate">
+                  <Badge className="border-brand-white/10 font-serif text-brand-slate">
                     CAT
                   </Badge>
                 ) : null}
                 {claim.isArchived ? (
-                  <Badge className="border-denied text-denied">Archived</Badge>
+                  <Badge className="border-denied font-serif text-denied">
+                    Archived
+                  </Badge>
                 ) : null}
               </div>
             </div>
@@ -189,17 +193,12 @@ export function ClaimDetailClient({
               <HeroMeta
                 label="Date of Loss"
                 value={format(new Date(claim.dateOfLoss), "MMM d, yyyy")}
-                mono
               />
               <HeroMeta label="Insurer" value={claim.carrierName || "—"} />
-              <HeroMeta
-                label="Policy #"
-                value={claim.policyNumber || "—"}
-                mono
-              />
+              <HeroMeta label="Policy #" value={claim.policyNumber || "—"} />
             </dl>
 
-            <p className="mt-3 text-sm text-brand-slate">
+            <p className="mt-3 font-serif text-sm text-brand-slate">
               {LOSS_TYPE_LABELS[claim.lossType]} · {claim.propertyAddress} ·{" "}
               Assigned:{" "}
               {adjusters.find((a) => a.id === claim.assignedAdjusterId)?.name ??
@@ -320,26 +319,16 @@ export function ClaimDetailClient({
 function HeroMeta({
   label,
   value,
-  mono,
 }: {
   label: string;
   value: string;
-  mono?: boolean;
 }) {
   return (
     <div>
-      <dt className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
+      <dt className="font-serif text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
         {label}
       </dt>
-      <dd
-        className={
-          mono
-            ? "mt-1 font-mono text-sm tracking-wide text-brand-white"
-            : "mt-1 font-serif text-base text-brand-white"
-        }
-      >
-        {value}
-      </dd>
+      <dd className="mt-1 font-serif text-base text-brand-white">{value}</dd>
     </div>
   );
 }
