@@ -1,0 +1,255 @@
+// BLACKBOX — Claims Management CMS
+// Blackline Public Adjusters LLC (internal ops)
+//
+// Phase 1: core data model only. Do not hard-delete Claims with related
+// records — archive via Claim.isArchived. Every status mutation must write
+// StatusHistory in the same transaction (enforced in application layer).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  /// Pooled connection (Transaction mode) — used by the app at runtime
+  url       = env("DATABASE_URL")
+  /// Direct connection — required for Prisma migrations against Supabase
+  directUrl = env("DIRECT_URL")
+}
+
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum ClaimStatus {
+  INTAKE
+  UNDER_REVIEW
+  INVESTIGATION
+  FILED
+  NEGOTIATING
+  SETTLED
+  CLOSED
+  DENIED
+}
+
+enum LossType {
+  WIND
+  FIRE
+  WATER
+  HAIL
+  VANDALISM
+  OTHER
+}
+
+enum PreferredContactMethod {
+  EMAIL
+  PHONE
+  TEXT
+}
+
+enum AdjusterRole {
+  ADMIN
+  ADJUSTER
+  VIEWER
+}
+
+enum DocType {
+  POLICY
+  ESTIMATE
+  PHOTO
+  CORRESPONDENCE
+  ENGINEERING_REPORT
+  DEMAND_LETTER
+  OTHER
+}
+
+/// Reserved for future AI extraction pipeline. Unused in this phase.
+enum ExtractionStatus {
+  PENDING
+  COMPLETE
+  FAILED
+  NOT_APPLICABLE
+}
+
+enum PaymentType {
+  ADVANCE
+  SETTLEMENT
+  FEE
+}
+
+// ---------------------------------------------------------------------------
+// Claim number sequence (BB-YYYY-####)
+// Transaction-safe per-year counter. Application code must increment
+// `lastValue` inside the same transaction that creates the Claim.
+// Format: BB-{year}-{lastValue padded to 4 digits}, e.g. BB-2026-0001
+// ---------------------------------------------------------------------------
+
+model ClaimNumberSequence {
+  year      Int @id
+  lastValue Int @default(0)
+}
+
+// ---------------------------------------------------------------------------
+// Adjuster (staff / auth principal)
+// ---------------------------------------------------------------------------
+
+model Adjuster {
+  id            String       @id @default(cuid())
+  name          String
+  email         String       @unique
+  /// bcrypt (or similar) hash for NextAuth Credentials — never store plaintext
+  passwordHash  String
+  licenseNumber String
+  role          AdjusterRole @default(ADJUSTER)
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  assignedClaims Claim[]         @relation("AssignedAdjuster")
+  uploadedDocs   Document[]      @relation("DocumentUploader")
+  statusChanges  StatusHistory[] @relation("StatusChangedBy")
+  payments       Payment[]       @relation("PaymentRecordedBy")
+}
+
+// ---------------------------------------------------------------------------
+// Claim
+// Soft-delete only: set isArchived = true. Related Documents, Payments, and
+// StatusHistory rows are retained. Prefer onDelete: Restrict on FKs so a
+// hard delete of a Claim with children is rejected by the database.
+// ---------------------------------------------------------------------------
+
+model Claim {
+  id                     String      @id @default(cuid())
+  /// Format BB-YYYY-#### — generated via ClaimNumberSequence, never random
+  claimNumber            String      @unique
+  status                 ClaimStatus @default(INTAKE)
+  lossType               LossType
+  dateOfLoss             DateTime    @db.Date
+  propertyAddress        String
+  zipCode                String
+  county                 String
+  /// Brief narrative from FNOL intake (Step 2)
+  lossDescription        String?     @db.Text
+  policyNumber           String?
+  carrierName            String?
+  estimatedValue         Decimal?    @db.Decimal(14, 2)
+  /// True when loss arises from a declared catastrophe / emergency event
+  isCatClaim             Boolean     @default(false)
+  /// Firm contingency: 20% standard, 10% when isCatClaim (FL PA fee cap on CAT)
+  /// Application layer must set this from isCatClaim on create/update — do not
+  /// rely on the schema default alone when isCatClaim is true.
+  contingencyFeePercent  Decimal     @default(20.00) @db.Decimal(5, 2)
+  assignedAdjusterId     String?
+  isArchived             Boolean     @default(false)
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  assignedAdjuster Adjuster?       @relation("AssignedAdjuster", fields: [assignedAdjusterId], references: [id], onDelete: Restrict)
+  claimants        Claimant[]
+  documents        Document[]
+  statusHistory    StatusHistory[]
+  payments         Payment[]
+
+  @@index([status])
+  @@index([assignedAdjusterId])
+  @@index([status, lossType])
+  @@index([isArchived])
+  @@index([updatedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Claimant — multiple per claim (e.g. co-owners); one may be primary contact
+// ---------------------------------------------------------------------------
+
+model Claimant {
+  id                     String                 @id @default(cuid())
+  claimId                String
+  firstName              String
+  lastName               String
+  email                  String
+  phone                  String
+  mailingAddress         String
+  preferredContactMethod PreferredContactMethod @default(EMAIL)
+  isPrimaryContact       Boolean                @default(false)
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+
+  claim Claim @relation(fields: [claimId], references: [id], onDelete: Restrict)
+
+  @@index([claimId])
+  @@index([lastName, firstName])
+}
+
+// ---------------------------------------------------------------------------
+// Document
+// AI_HOOK: extractedData + extractionStatus are reserved for a future
+// extraction service. Leave unused this phase; upload handler will later
+// populate these after file storage.
+// ---------------------------------------------------------------------------
+
+model Document {
+  id               String           @id @default(cuid())
+  claimId          String
+  fileName         String
+  fileUrl          String
+  fileSizeBytes    Int
+  mimeType         String
+  docType          DocType
+  uploadedById     String
+  uploadedAt       DateTime         @default(now())
+  /// AI_HOOK: JSON payload from future extraction (policy #, DOL, names, etc.)
+  extractedData    Json?
+  /// AI_HOOK: set PENDING → COMPLETE/FAILED once extraction runs
+  extractionStatus ExtractionStatus @default(NOT_APPLICABLE)
+
+  claim      Claim    @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  uploadedBy Adjuster @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@index([claimId])
+  @@index([docType])
+  @@index([uploadedById])
+}
+
+// ---------------------------------------------------------------------------
+// StatusHistory — append-only audit trail
+// Application MUST create a row whenever Claim.status changes, in the same
+// transaction. previousStatus is null for the initial INTAKE entry on create.
+// ---------------------------------------------------------------------------
+
+model StatusHistory {
+  id             String       @id @default(cuid())
+  claimId        String
+  previousStatus ClaimStatus?
+  newStatus      ClaimStatus
+  changedById    String
+  changedAt      DateTime     @default(now())
+  note           String?      @db.Text
+
+  claim     Claim    @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  changedBy Adjuster @relation("StatusChangedBy", fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([claimId, changedAt])
+  @@index([changedById])
+}
+
+// ---------------------------------------------------------------------------
+// Payment — ADMIN-facing log (application gate; schema allows any Adjuster FK)
+// ---------------------------------------------------------------------------
+
+model Payment {
+  id           String      @id @default(cuid())
+  claimId      String
+  type         PaymentType
+  amount       Decimal     @db.Decimal(14, 2)
+  date         DateTime    @db.Date
+  note         String?     @db.Text
+  recordedById String
+  createdAt    DateTime    @default(now())
+
+  claim      Claim    @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  recordedBy Adjuster @relation("PaymentRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@index([claimId])
+  @@index([recordedById])
+}
