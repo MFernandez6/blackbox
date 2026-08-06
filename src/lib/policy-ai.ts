@@ -1,7 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { readFile } from "fs/promises";
-import path from "path";
 import type { PolicyExtractionResult } from "@/lib/policy-extraction";
+import { readStoredDocumentBytes } from "@/lib/storage";
 
 const EXTRACTION_PROMPT = `You are extracting homeowners insurance policy data for a Florida public adjuster CMS.
 Return ONLY valid JSON (no markdown) with this shape:
@@ -25,12 +24,6 @@ Rules:
 - coverageAnalysis: brief note on how limits apply; null if unknown.
 - confidence: 0–1.`;
 
-function resolveLocalFilePath(fileUrl: string): string | null {
-  if (!fileUrl.startsWith("/")) return null;
-  const rel = fileUrl.replace(/^\//, "");
-  return path.join(process.cwd(), "public", rel.startsWith("uploads") ? rel : rel);
-}
-
 function parseJsonPayload(text: string): PolicyExtractionResult {
   const trimmed = text.trim();
   const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -41,7 +34,7 @@ function parseJsonPayload(text: string): PolicyExtractionResult {
 
 /**
  * Extract policy coverage fields via Anthropic.
- * Requires ANTHROPIC_API_KEY. Supports local PDF/image uploads under /public.
+ * Requires ANTHROPIC_API_KEY. Reads files from Supabase public URLs or local /uploads.
  */
 export async function extractPolicyFromDocument(opts: {
   fileUrl: string;
@@ -56,14 +49,7 @@ export async function extractPolicyFromDocument(opts: {
   }
 
   const client = new Anthropic({ apiKey });
-  const localPath = resolveLocalFilePath(opts.fileUrl);
-  if (!localPath) {
-    throw new Error(
-      "Policy file is not a local upload path; cannot send to extraction."
-    );
-  }
-
-  const bytes = await readFile(localPath);
+  const bytes = await readStoredDocumentBytes(opts.fileUrl);
   const base64 = bytes.toString("base64");
   const mime = opts.mimeType || "application/pdf";
 
@@ -93,7 +79,6 @@ export async function extractPolicyFromDocument(opts: {
       },
     });
   } else {
-    // Treat as UTF-8 text if possible
     const text = bytes.toString("utf8").slice(0, 120_000);
     content.push({
       type: "text",

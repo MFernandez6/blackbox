@@ -22,6 +22,7 @@ Ops tool for adjusters and staff — not client-facing. Owner / principal: Migue
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Project Settings → API |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Project Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | Project Settings → API → `service_role` (server uploads on Vercel) |
 | `DATABASE_URL` | Database → Connection pooling (Transaction, port `6543`, `?pgbouncer=true`) |
 | `DIRECT_URL` | Database → Direct connection (port `5432`) |
 | `NEXTAUTH_URL` / `NEXTAUTH_SECRET` | Local auth (v1 still uses NextAuth + `Adjuster` table) |

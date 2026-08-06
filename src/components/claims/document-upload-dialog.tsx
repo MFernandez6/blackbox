@@ -71,9 +71,19 @@ export function DocumentUploadDialog({
       form.append("docType", docType);
 
       const res = await fetch("/api/upload", { method: "POST", body: form });
-      const data = await res.json();
+      let data: { error?: string; id?: string; fileUrl?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        setError(
+          res.ok
+            ? "Upload completed but response was unreadable."
+            : `Upload failed (${res.status}).`
+        );
+        return;
+      }
       if (!res.ok) {
-        setError(data.error ?? "Upload failed.");
+        setError(data.error ?? `Upload failed (${res.status}).`);
         return;
       }
 
