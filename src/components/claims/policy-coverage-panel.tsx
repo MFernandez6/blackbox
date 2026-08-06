@@ -181,16 +181,14 @@ export function PolicyCoveragePanel({
     });
   }
 
-  async function parsePolicy() {
+  async function parsePolicy(documentId?: string) {
     setError("");
     setParsing(true);
+    const docId = documentId || selectedDocId || undefined;
+    if (documentId) setSelectedDocId(documentId);
     try {
       const hint = parseHint === "AUTO" ? null : parseHint;
-      const result = await parsePolicyDocumentAction(
-        claimId,
-        selectedDocId || undefined,
-        hint
-      );
+      const result = await parsePolicyDocumentAction(claimId, docId, hint);
       if (!result.ok) {
         setError(result.error);
         return;
@@ -313,14 +311,25 @@ export function PolicyCoveragePanel({
           </p>
         </div>
         {editable ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setUploadOpen(true)}
-          >
-            Upload Policy
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setUploadOpen(true)}
+            >
+              Upload Policy
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="solid"
+              disabled={parsing || !selectedDocId}
+              onClick={parsePolicy}
+            >
+              {parsing ? "Parsing…" : "Parse Policy"}
+            </Button>
+          </div>
         ) : null}
       </div>
 
@@ -338,27 +347,45 @@ export function PolicyCoveragePanel({
         </p>
         {policyDocs.length === 0 ? (
           <p className="text-sm text-brand-slate">
-            No POLICY documents lodged. Upload a declarations page, CGL, flood,
-            umbrella, or COI, then parse.
+            No POLICY documents lodged. Use Upload Policy (document type must
+            be Policy), then Parse Policy to extract coverage.
           </p>
         ) : (
           <ul className="space-y-1.5">
             {policyDocs.map((doc) => (
-              <li key={doc.id} className="text-sm text-brand-white">
-                <a
-                  href={doc.fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-brand-gold hover:underline"
-                >
-                  {doc.fileName}
-                </a>
-                <span className="ml-2 font-mono text-[10px] uppercase tracking-wider text-brand-slate">
-                  {doc.extractionStatus}
-                  {doc.policyLine
-                    ? ` · ${POLICY_LINE_LABELS[doc.policyLine]}`
-                    : ""}
-                </span>
+              <li
+                key={doc.id}
+                className="flex flex-wrap items-center justify-between gap-2 text-sm text-brand-white"
+              >
+                <div className="min-w-0">
+                  <a
+                    href={doc.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-brand-gold hover:underline"
+                  >
+                    {doc.fileName}
+                  </a>
+                  <span className="ml-2 font-mono text-[10px] uppercase tracking-wider text-brand-slate">
+                    {doc.extractionStatus}
+                    {doc.policyLine
+                      ? ` · ${POLICY_LINE_LABELS[doc.policyLine]}`
+                      : ""}
+                  </span>
+                </div>
+                {editable ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={parsing}
+                    onClick={() => void parsePolicy(doc.id)}
+                  >
+                    {parsing && selectedDocId === doc.id
+                      ? "Parsing…"
+                      : "Parse"}
+                  </Button>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -402,15 +429,6 @@ export function PolicyCoveragePanel({
                 </SelectContent>
               </Select>
             </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="solid"
-              disabled={parsing || !selectedDocId}
-              onClick={parsePolicy}
-            >
-              {parsing ? "Parsing…" : "Parse Policy"}
-            </Button>
           </div>
         ) : null}
       </div>
