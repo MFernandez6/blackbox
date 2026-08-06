@@ -426,6 +426,3 @@ export async function updateCoverageAction(
     return { ok: false, error: "Coverage update failed." };
   }
 }
-
-/** @deprecated Prefer `@/lib/actions/claim-policies` — re-exported for compatibility. */
-export { parsePolicyDocumentAction } from "@/lib/actions/claim-policies";
