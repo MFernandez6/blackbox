@@ -69,13 +69,31 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.email = user.email;
+      }
+      // Re-bind Adjuster.id from email so sessions survive reseeds
+      const email =
+        typeof token.email === "string" ? token.email.toLowerCase() : null;
+      if (email) {
+        try {
+          const adjuster = await prisma.adjuster.findFirst({
+            where: { email, isActive: true },
+            select: { id: true, role: true },
+          });
+          if (adjuster) {
+            token.id = adjuster.id;
+            token.role = adjuster.role;
+          }
+        } catch {
+          // keep existing token if DB is briefly unavailable
+        }
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role;
+        session.user.id = token.id as string;
+        session.user.role = token.role as AdjusterRole;
       }
       return session;
     },
@@ -84,6 +102,35 @@ export const authOptions: NextAuthOptions = {
 
 export function getSession() {
   return getServerSession(authOptions);
+}
+
+/**
+ * Resolve the live Adjuster row for the current session.
+ * Survives DB reseeds where JWT still holds a stale Adjuster.id.
+ */
+export async function resolveSessionAdjuster(session: {
+  user?: { id?: string; email?: string | null; role?: AdjusterRole } | null;
+}) {
+  const email = session.user?.email?.toLowerCase();
+  const id = session.user?.id;
+
+  if (id) {
+    const byId = await prisma.adjuster.findFirst({
+      where: { id, isActive: true },
+      select: { id: true, email: true, name: true, role: true },
+    });
+    if (byId) return byId;
+  }
+
+  if (email) {
+    const byEmail = await prisma.adjuster.findFirst({
+      where: { email, isActive: true },
+      select: { id: true, email: true, name: true, role: true },
+    });
+    if (byEmail) return byEmail;
+  }
+
+  return null;
 }
 
 export async function requireSession() {

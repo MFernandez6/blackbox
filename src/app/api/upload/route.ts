@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { ExtractionStatus } from "@prisma/client";
-import { authOptions, canEdit } from "@/lib/auth";
+import {
+  authOptions,
+  canEdit,
+  resolveSessionAdjuster,
+} from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { docTypeEnum } from "@/lib/schemas/claim";
 import { storeClaimDocument } from "@/lib/storage";
@@ -13,8 +17,19 @@ export const maxDuration = 60;
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !canEdit(session.user.role)) {
+    if (!session?.user || !canEdit(session.user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const uploader = await resolveSessionAdjuster(session);
+    if (!uploader) {
+      return NextResponse.json(
+        {
+          error:
+            "Your session no longer matches an active adjuster. Sign out and sign back in, then retry.",
+        },
+        { status: 401 }
+      );
     }
 
     const form = await req.formData();
@@ -51,8 +66,8 @@ export async function POST(req: NextRequest) {
       );
     }
     if (
-      session.user.role === "ADJUSTER" &&
-      claim.assignedAdjusterId !== session.user.id
+      uploader.role === "ADJUSTER" &&
+      claim.assignedAdjusterId !== uploader.id
     ) {
       return NextResponse.json(
         { error: "Not assigned to this file." },
@@ -89,7 +104,7 @@ export async function POST(req: NextRequest) {
         fileSizeBytes: bytes.length,
         mimeType: file.type || "application/octet-stream",
         docType: docTypeParsed.data,
-        uploadedById: session.user.id,
+        uploadedById: uploader.id,
         extractionStatus,
       },
     });
