@@ -70,9 +70,9 @@ export async function parsePolicyDocumentAction(
       return { ok: false, error: "Insufficient privileges to parse policy." };
     }
 
-    const doc = documentId
+    let doc = documentId
       ? await prisma.document.findFirst({
-          where: { id: documentId, claimId, docType: "POLICY" },
+          where: { id: documentId, claimId },
         })
       : await prisma.document.findFirst({
           where: { claimId, docType: "POLICY" },
@@ -83,8 +83,20 @@ export async function parsePolicyDocumentAction(
       return {
         ok: false,
         error:
-          "No policy document on file. Upload a POLICY document first, then parse.",
+          "No document found to parse. Upload a policy PDF in the vault, then parse.",
       };
+    }
+
+    // Vault uploads may not be typed as POLICY yet — promote so Coverage Protocol picks them up
+    if (doc.docType !== "POLICY") {
+      doc = await prisma.document.update({
+        where: { id: doc.id },
+        data: {
+          docType: "POLICY",
+          extractionStatus: "PENDING",
+          policyLine: hintLine ?? doc.policyLine,
+        },
+      });
     }
 
     await prisma.document.update({

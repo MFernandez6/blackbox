@@ -2,14 +2,19 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import type { DocType, AdjusterRole } from "@prisma/client";
-import { DOC_TYPE_LABELS } from "@/lib/claims/labels";
+import { toast } from "sonner";
+import type { DocType, AdjusterRole, PolicyLine } from "@prisma/client";
+import { DOC_TYPE_LABELS, POLICY_LINE_LABELS } from "@/lib/claims/labels";
 import { canEdit } from "@/lib/auth-client";
+import { parsePolicyDocumentAction } from "@/lib/actions/claim-policies";
 import { DocumentUploadDialog } from "@/components/claims/document-upload-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { ErrorBanner } from "@/components/ui/error-banner";
 import {
   Select,
   SelectContent,
@@ -20,6 +25,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -34,6 +40,7 @@ type Doc = {
   uploadedAt: string;
   uploaderName: string;
   extractionStatus?: string;
+  policyLine?: PolicyLine | null;
 };
 
 type Props = {
@@ -47,6 +54,9 @@ type Props = {
 type SortKey = "date" | "name" | "type";
 
 const ALL_DOC_TYPES = Object.keys(DOC_TYPE_LABELS) as DocType[];
+const LINE_OPTIONS = Object.entries(POLICY_LINE_LABELS) as Array<
+  [PolicyLine, string]
+>;
 
 function mimeBadge(mimeType: string): "PDF" | "IMG" | "FILE" {
   if (mimeType === "application/pdf") return "PDF";
@@ -62,6 +72,15 @@ function isPdf(mimeType: string) {
   return mimeType === "application/pdf";
 }
 
+function canParseAsPolicy(doc: Doc) {
+  return (
+    doc.docType === "POLICY" ||
+    isPdf(doc.mimeType) ||
+    isImage(doc.mimeType) ||
+    doc.fileName.toLowerCase().endsWith(".pdf")
+  );
+}
+
 export function DocumentsVaultClient({
   claimId,
   claimNumber,
@@ -69,12 +88,17 @@ export function DocumentsVaultClient({
   role,
   embedded = false,
 }: Props) {
+  const router = useRouter();
   const editable = canEdit(role);
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("date");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
+  const [parseDoc, setParseDoc] = useState<Doc | null>(null);
+  const [parseHint, setParseHint] = useState<PolicyLine | "AUTO">("AUTO");
+  const [parsing, setParsing] = useState(false);
+  const [parseError, setParseError] = useState("");
 
   const counts = useMemo(() => {
     const byType = {} as Record<DocType, number>;
@@ -84,7 +108,10 @@ export function DocumentsVaultClient({
   }, [documents]);
 
   const filtered = useMemo(() => {
-    let list = filter === "all" ? documents : documents.filter((d) => d.docType === filter);
+    let list =
+      filter === "all"
+        ? documents
+        : documents.filter((d) => d.docType === filter);
     const q = search.trim().toLowerCase();
     if (q) list = list.filter((d) => d.fileName.toLowerCase().includes(q));
 
@@ -96,10 +123,42 @@ export function DocumentsVaultClient({
           return a.docType.localeCompare(b.docType);
         case "date":
         default:
-          return new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime();
+          return (
+            new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+          );
       }
     });
   }, [documents, filter, search, sort]);
+
+  function openParse(doc: Doc) {
+    setParseError("");
+    setParseHint(doc.policyLine ?? "AUTO");
+    setParseDoc(doc);
+  }
+
+  async function runParse() {
+    if (!parseDoc) return;
+    setParseError("");
+    setParsing(true);
+    try {
+      const hint = parseHint === "AUTO" ? null : parseHint;
+      const result = await parsePolicyDocumentAction(
+        claimId,
+        parseDoc.id,
+        hint
+      );
+      if (!result.ok) {
+        setParseError(result.error);
+        return;
+      }
+      toast.success(result.data.message);
+      setParseDoc(null);
+      setPreviewDoc(null);
+      router.refresh();
+    } finally {
+      setParsing(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -115,9 +174,14 @@ export function DocumentsVaultClient({
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow">File Integrity</p>
-            <h1 className="mt-1 font-serif text-2xl text-brand-white">Document Vault</h1>
+            <h1 className="mt-1 font-serif text-2xl text-brand-white">
+              Document Vault
+            </h1>
             <p className="mt-1 font-mono text-xs tracking-wide text-brand-slate">
-              <Link href={`/claims/${claimId}`} className="hover:text-brand-gold">
+              <Link
+                href={`/claims/${claimId}`}
+                className="hover:text-brand-gold"
+              >
                 {claimNumber}
               </Link>
             </p>
@@ -227,6 +291,11 @@ export function DocumentsVaultClient({
                 <th className="px-3 py-2 text-left font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                   By
                 </th>
+                {editable ? (
+                  <th className="px-3 py-2 text-right font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
+                    Actions
+                  </th>
+                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -251,7 +320,9 @@ export function DocumentsVaultClient({
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="truncate text-brand-white">{d.fileName}</span>
+                      <span className="truncate text-brand-white">
+                        {d.fileName}
+                      </span>
                       {d.extractionStatus ? (
                         <Badge className="border-brand-white/10 text-brand-slate">
                           {d.extractionStatus}
@@ -266,6 +337,27 @@ export function DocumentsVaultClient({
                     {format(new Date(d.uploadedAt), "yyyy-MM-dd")}
                   </td>
                   <td className="px-3 py-2 text-brand-slate">{d.uploaderName}</td>
+                  {editable ? (
+                    <td className="px-3 py-2 text-right">
+                      {canParseAsPolicy(d) ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openParse(d);
+                          }}
+                        >
+                          Parse
+                        </Button>
+                      ) : (
+                        <span className="font-mono text-[10px] text-brand-slate">
+                          —
+                        </span>
+                      )}
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>
@@ -273,12 +365,17 @@ export function DocumentsVaultClient({
         </div>
       )}
 
-      <Dialog open={!!previewDoc} onOpenChange={(open) => !open && setPreviewDoc(null)}>
+      <Dialog
+        open={!!previewDoc}
+        onOpenChange={(open) => !open && setPreviewDoc(null)}
+      >
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           {previewDoc ? (
             <>
               <DialogHeader>
-                <DialogTitle className="truncate pr-8">{previewDoc.fileName}</DialogTitle>
+                <DialogTitle className="truncate pr-8">
+                  {previewDoc.fileName}
+                </DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <dl className="grid gap-2 text-sm sm:grid-cols-2">
@@ -291,8 +388,11 @@ export function DocumentsVaultClient({
                   <div>
                     <dt className="eyebrow">Uploaded</dt>
                     <dd className="font-mono text-xs text-brand-white">
-                      {format(new Date(previewDoc.uploadedAt), "yyyy-MM-dd HH:mm")} ·{" "}
-                      {previewDoc.uploaderName}
+                      {format(
+                        new Date(previewDoc.uploadedAt),
+                        "yyyy-MM-dd HH:mm"
+                      )}{" "}
+                      · {previewDoc.uploaderName}
                     </dd>
                   </div>
                   {previewDoc.extractionStatus ? (
@@ -306,6 +406,19 @@ export function DocumentsVaultClient({
                     </div>
                   ) : null}
                 </dl>
+
+                {editable && canParseAsPolicy(previewDoc) ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="solid"
+                      onClick={() => openParse(previewDoc)}
+                    >
+                      Parse as Policy
+                    </Button>
+                  </div>
+                ) : null}
 
                 {isImage(previewDoc.mimeType) ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -328,11 +441,16 @@ export function DocumentsVaultClient({
                     <dl className="grid gap-2 text-sm">
                       <div>
                         <dt className="eyebrow">MIME</dt>
-                        <dd className="font-mono text-xs">{previewDoc.mimeType}</dd>
+                        <dd className="font-mono text-xs">
+                          {previewDoc.mimeType}
+                        </dd>
                       </div>
                     </dl>
                     <Button asChild size="sm" variant="outline">
-                      <a href={previewDoc.fileUrl} download={previewDoc.fileName}>
+                      <a
+                        href={previewDoc.fileUrl}
+                        download={previewDoc.fileName}
+                      >
                         Download file
                       </a>
                     </Button>
@@ -341,6 +459,80 @@ export function DocumentsVaultClient({
               </div>
             </>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!parseDoc}
+        onOpenChange={(open) => {
+          if (!open) {
+            setParseDoc(null);
+            setParseError("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <p className="eyebrow">Coverage Protocol</p>
+            <DialogTitle>Parse Policy Document</DialogTitle>
+          </DialogHeader>
+
+          {parseError ? (
+            <ErrorBanner
+              message={parseError}
+              onDismiss={() => setParseError("")}
+            />
+          ) : null}
+
+          {parseDoc ? (
+            <div className="space-y-4">
+              <p className="text-sm text-brand-slate">
+                Extract coverage limits from{" "}
+                <span className="text-brand-white">{parseDoc.fileName}</span>
+                {parseDoc.docType !== "POLICY"
+                  ? " and classify it as a Policy document on this file."
+                  : "."}
+              </p>
+              <div className="space-y-2">
+                <Label>Product line hint</Label>
+                <Select
+                  value={parseHint}
+                  onValueChange={(v) =>
+                    setParseHint(v as PolicyLine | "AUTO")
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AUTO">Auto-detect</SelectItem>
+                    {LINE_OPTIONS.map(([k, label]) => (
+                      <SelectItem key={k} value={k}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setParseDoc(null)}
+              disabled={parsing}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="solid"
+              disabled={parsing || !parseDoc}
+              onClick={() => void runParse()}
+            >
+              {parsing ? "Parsing…" : "Parse Policy"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
