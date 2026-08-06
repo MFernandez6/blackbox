@@ -128,7 +128,7 @@ export async function extractPolicyFromDocument(opts: {
   content.push({ type: "text", text: EXTRACTION_PROMPT + hint });
 
   const message = await client.messages.create({
-    model: process.env.ANTHROPIC_POLICY_MODEL || "claude-sonnet-4-20250514",
+    model: process.env.ANTHROPIC_POLICY_MODEL || "claude-sonnet-4-6",
     max_tokens: 4096,
     messages: [{ role: "user", content }],
   });
