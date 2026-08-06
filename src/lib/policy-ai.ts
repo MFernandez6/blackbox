@@ -7,6 +7,22 @@ import {
 } from "@/lib/policy-extraction";
 import { readStoredDocumentBytes } from "@/lib/storage";
 
+/** Live Anthropic model for policy PDF extraction (retired IDs must not be used). */
+const DEFAULT_POLICY_MODEL = "claude-sonnet-4-6";
+const RETIRED_POLICY_MODELS = new Set([
+  "claude-sonnet-4-20250514",
+  "claude-sonnet-4-0",
+  "claude-opus-4-20250514",
+]);
+
+function resolvePolicyModel(): string {
+  const raw = (process.env.ANTHROPIC_POLICY_MODEL || "").trim();
+  if (!raw || RETIRED_POLICY_MODELS.has(raw) || raw === "[SENSITIVE]") {
+    return DEFAULT_POLICY_MODEL;
+  }
+  return raw;
+}
+
 const POLICY_LINES =
   "HOMEOWNERS | CONDO_MASTER | COMMERCIAL_PROPERTY | CGL | UMBRELLA | EXCESS | FLOOD | AUTO | WORKERS_COMP | OTHER";
 
@@ -87,6 +103,7 @@ export async function extractPolicyFromDocument(opts: {
   const bytes = await readStoredDocumentBytes(opts.fileUrl);
   const base64 = bytes.toString("base64");
   const mime = opts.mimeType || "application/pdf";
+  const model = resolvePolicyModel();
 
   const content: Anthropic.MessageCreateParams["messages"][0]["content"] = [];
 
@@ -127,11 +144,17 @@ export async function extractPolicyFromDocument(opts: {
 
   content.push({ type: "text", text: EXTRACTION_PROMPT + hint });
 
-  const message = await client.messages.create({
-    model: process.env.ANTHROPIC_POLICY_MODEL || "claude-sonnet-4-6",
-    max_tokens: 4096,
-    messages: [{ role: "user", content }],
-  });
+  let message: Anthropic.Message;
+  try {
+    message = await client.messages.create({
+      model,
+      max_tokens: 4096,
+      messages: [{ role: "user", content }],
+    });
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new Error(`Policy AI failed (model ${model}): ${detail}`);
+  }
 
   const textBlock = message.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
