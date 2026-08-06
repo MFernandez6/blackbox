@@ -379,8 +379,14 @@ export async function registerDocumentAction(input: {
     revalidatePath(`/claims/${input.claimId}/documents`);
     return { ok: true, data: { id: doc.id } };
   } catch (e) {
-    console.error(e);
-    return { ok: false, error: "Document registration failed." };
+    console.error("registerDocumentAction:", e);
+    const detail =
+      e instanceof Error && e.message !== "UNAUTHORIZED"
+        ? e.message
+        : e instanceof Error && e.message === "UNAUTHORIZED"
+          ? "Unauthorized"
+          : "Document registration failed.";
+    return { ok: false, error: detail };
   }
 }
 

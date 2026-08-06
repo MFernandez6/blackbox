@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { ExtractionStatus } from "@prisma/client";
 import { authOptions, canEdit } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { docTypeEnum } from "@/lib/schemas/claim";
-import { registerDocumentAction } from "@/lib/actions/claims";
 import { storeClaimDocument } from "@/lib/storage";
+import { revalidatePath } from "next/cache";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -11,7 +13,7 @@ export const maxDuration = 60;
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !canEdit(session.user.role)) {
+    if (!session?.user?.id || !canEdit(session.user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -35,7 +37,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Soft size guard (Vercel hobby request body ~4.5MB)
+    const claim = await prisma.claim.findUnique({
+      where: { id: claimId },
+      select: { id: true, assignedAdjusterId: true, isArchived: true },
+    });
+    if (!claim) {
+      return NextResponse.json({ error: "Claim not found." }, { status: 404 });
+    }
+    if (claim.isArchived) {
+      return NextResponse.json(
+        { error: "Archived files are sealed." },
+        { status: 400 }
+      );
+    }
+    if (
+      session.user.role === "ADJUSTER" &&
+      claim.assignedAdjusterId !== session.user.id
+    ) {
+      return NextResponse.json(
+        { error: "Not assigned to this file." },
+        { status: 403 }
+      );
+    }
+
     const maxBytes = 20 * 1024 * 1024;
     if (file.size > maxBytes) {
       return NextResponse.json(
@@ -52,20 +76,28 @@ export async function POST(req: NextRequest) {
       mimeType: file.type || "application/octet-stream",
     });
 
-    const result = await registerDocumentAction({
-      claimId,
-      fileName: file.name,
-      fileUrl: stored.fileUrl,
-      fileSizeBytes: bytes.length,
-      mimeType: file.type || "application/octet-stream",
-      docType: docTypeParsed.data,
+    const extractionStatus =
+      docTypeParsed.data === "POLICY"
+        ? ExtractionStatus.PENDING
+        : ExtractionStatus.NOT_APPLICABLE;
+
+    const doc = await prisma.document.create({
+      data: {
+        claimId,
+        fileName: file.name,
+        fileUrl: stored.fileUrl,
+        fileSizeBytes: bytes.length,
+        mimeType: file.type || "application/octet-stream",
+        docType: docTypeParsed.data,
+        uploadedById: session.user.id,
+        extractionStatus,
+      },
     });
 
-    if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: 500 });
-    }
+    revalidatePath(`/claims/${claimId}`);
+    revalidatePath(`/claims/${claimId}/documents`);
 
-    return NextResponse.json({ id: result.data.id, fileUrl: stored.fileUrl });
+    return NextResponse.json({ id: doc.id, fileUrl: stored.fileUrl });
   } catch (e) {
     console.error("Upload failed:", e);
     const message =
