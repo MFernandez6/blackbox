@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { ExtractionStatus } from "@prisma/client";
+import { ExtractionStatus, type PolicyLine } from "@prisma/client";
 import {
   authOptions,
   canEdit,
@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { docTypeEnum } from "@/lib/schemas/claim";
+import { coercePolicyLine } from "@/lib/policy-extraction";
 import { storeClaimDocument } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
 
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest) {
     const file = form.get("file");
     const claimId = String(form.get("claimId") ?? "");
     const docTypeRaw = String(form.get("docType") ?? "");
+    const policyLineRaw = String(form.get("policyLine") ?? "").trim();
 
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "No file provided." }, { status: 400 });
@@ -96,6 +98,11 @@ export async function POST(req: NextRequest) {
         ? ExtractionStatus.PENDING
         : ExtractionStatus.NOT_APPLICABLE;
 
+    const policyLine: PolicyLine | null =
+      docTypeParsed.data === "POLICY" && policyLineRaw
+        ? coercePolicyLine(policyLineRaw)
+        : null;
+
     const doc = await prisma.document.create({
       data: {
         claimId,
@@ -106,6 +113,7 @@ export async function POST(req: NextRequest) {
         docType: docTypeParsed.data,
         uploadedById: uploader.id,
         extractionStatus,
+        policyLine,
       },
     });
 

@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import type { DocType } from "@prisma/client";
-import { DOC_TYPE_LABELS } from "@/lib/claims/labels";
+import type { DocType, PolicyLine } from "@prisma/client";
+import { DOC_TYPE_LABELS, POLICY_LINE_LABELS } from "@/lib/claims/labels";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ErrorBanner } from "@/components/ui/error-banner";
@@ -29,6 +29,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   /** Prefill doc type (e.g. POLICY for certified copy upload) */
   defaultDocType?: DocType;
+  /** Show optional product-line hint when uploading policies */
+  showPolicyLineHint?: boolean;
 };
 
 export function DocumentUploadDialog({
@@ -36,9 +38,11 @@ export function DocumentUploadDialog({
   open,
   onOpenChange,
   defaultDocType,
+  showPolicyLineHint = false,
 }: Props) {
   const router = useRouter();
   const [docType, setDocType] = useState<DocType | "">("");
+  const [policyLine, setPolicyLine] = useState<PolicyLine | "AUTO">("AUTO");
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState("");
@@ -47,6 +51,7 @@ export function DocumentUploadDialog({
   useEffect(() => {
     if (open) {
       setDocType(defaultDocType ?? "");
+      setPolicyLine("AUTO");
       setFile(null);
       setError("");
     }
@@ -69,6 +74,13 @@ export function DocumentUploadDialog({
       form.append("file", file);
       form.append("claimId", claimId);
       form.append("docType", docType);
+      if (
+        docType === "POLICY" &&
+        showPolicyLineHint &&
+        policyLine !== "AUTO"
+      ) {
+        form.append("policyLine", policyLine);
+      }
 
       const res = await fetch("/api/upload", { method: "POST", body: form });
       let data: { error?: string; id?: string; fileUrl?: string } = {};
@@ -89,7 +101,7 @@ export function DocumentUploadDialog({
 
       toast.success(
         docType === "POLICY"
-          ? "Certified policy lodged — run Parse Policy to populate Coverage A–D"
+          ? "Policy lodged — run Parse Policy to extract coverage"
           : "Document lodged in vault"
       );
       setFile(null);
@@ -102,6 +114,9 @@ export function DocumentUploadDialog({
       setUploading(false);
     }
   }
+
+  const showLine =
+    showPolicyLineHint && (docType === "POLICY" || defaultDocType === "POLICY");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -135,9 +150,35 @@ export function DocumentUploadDialog({
             </Select>
           </div>
 
+          {showLine ? (
+            <div className="space-y-2">
+              <Label>Product line (optional hint)</Label>
+              <Select
+                value={policyLine}
+                onValueChange={(v) =>
+                  setPolicyLine(v as PolicyLine | "AUTO")
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="AUTO">Auto-detect on parse</SelectItem>
+                  {Object.entries(POLICY_LINE_LABELS).map(([k, label]) => (
+                    <SelectItem key={k} value={k}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+
           <div
             className={`border border-dashed px-4 py-10 text-center transition-colors ${
-              dragging ? "border-brand-gold bg-secondary" : "border-brand-white/10"
+              dragging
+                ? "border-brand-gold bg-secondary"
+                : "border-brand-white/10"
             }`}
             onDragOver={(e) => {
               e.preventDefault();

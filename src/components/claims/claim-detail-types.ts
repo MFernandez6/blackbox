@@ -8,8 +8,30 @@ import type {
   TaskStatus,
   EmailDirection,
   AdjusterRole,
+  PolicyLine,
 } from "@prisma/client";
 import type { CarrierExpertInput } from "@/lib/schemas/claim";
+import type { PolicyLimitRow } from "@/lib/policy-extraction";
+
+export type ClaimPolicyDetail = {
+  id: string;
+  line: PolicyLine;
+  label: string | null;
+  policyNumber: string | null;
+  carrierName: string | null;
+  namedInsured: string | null;
+  effectiveDate: string | null;
+  expirationDate: string | null;
+  limits: PolicyLimitRow[];
+  deductibleNotes: string | null;
+  exclusions: string | null;
+  endorsements: string | null;
+  analysis: string | null;
+  premium: string | null;
+  documentId: string | null;
+  parsedAt: string | null;
+  isPrimary: boolean;
+};
 
 export type ClaimDetailData = {
   id: string;
@@ -39,6 +61,7 @@ export type ClaimDetailData = {
   policyEndorsements: string | null;
   coverageAnalysis: string | null;
   policyParsedAt: string | null;
+  policies: ClaimPolicyDetail[];
   estimatedValue: string | null;
   demandAmount: string | null;
   demandSentDate: string | null;
@@ -85,6 +108,7 @@ export type ClaimDetailData = {
     uploadedAt: string;
     uploaderName: string;
     extractionStatus: string;
+    policyLine: PolicyLine | null;
   }>;
   payments: Array<{
     id: string;

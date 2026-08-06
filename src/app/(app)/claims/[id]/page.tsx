@@ -8,6 +8,7 @@ import {
 } from "@/components/claims/claim-detail-client";
 import { ClaimDetailSkeleton } from "@/components/claims/claim-detail-skeleton";
 import type { CarrierExpertInput } from "@/lib/schemas/claim";
+import { parseLimitsJson } from "@/lib/policy-extraction";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,9 @@ async function ClaimDetailDataLoader({
         orderBy: { emailDate: "desc" },
         include: { createdBy: { select: { name: true } } },
       },
+      policies: {
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+      },
     },
   });
 
@@ -105,6 +109,25 @@ async function ClaimDetailDataLoader({
     policyEndorsements: claim.policyEndorsements,
     coverageAnalysis: claim.coverageAnalysis,
     policyParsedAt: isoDate(claim.policyParsedAt),
+    policies: claim.policies.map((p) => ({
+      id: p.id,
+      line: p.line,
+      label: p.label,
+      policyNumber: p.policyNumber,
+      carrierName: p.carrierName,
+      namedInsured: p.namedInsured,
+      effectiveDate: isoDate(p.effectiveDate),
+      expirationDate: isoDate(p.expirationDate),
+      limits: parseLimitsJson(p.limits),
+      deductibleNotes: p.deductibleNotes,
+      exclusions: p.exclusions,
+      endorsements: p.endorsements,
+      analysis: p.analysis,
+      premium: p.premium?.toString() ?? null,
+      documentId: p.documentId,
+      parsedAt: isoDate(p.parsedAt),
+      isPrimary: p.isPrimary,
+    })),
     estimatedValue: claim.estimatedValue?.toString() ?? null,
     demandAmount: claim.demandAmount?.toString() ?? null,
     demandSentDate: isoDate(claim.demandSentDate),
@@ -151,6 +174,7 @@ async function ClaimDetailDataLoader({
       uploadedAt: d.uploadedAt.toISOString(),
       uploaderName: d.uploadedBy.name,
       extractionStatus: d.extractionStatus,
+      policyLine: d.policyLine,
     })),
     payments: claim.payments.map((p) => ({
       id: p.id,

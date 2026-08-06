@@ -287,18 +287,7 @@ export function OverviewTab({ claim, adjusters, editable }: ClaimWorkspaceProps)
         <PolicyCoveragePanel
           claimId={claim.id}
           editable={editable}
-          policyParsedAt={claim.policyParsedAt}
-          initial={{
-            coverageALimit: claim.coverageALimit ?? "",
-            coverageBLimit: claim.coverageBLimit ?? "",
-            coverageCLimit: claim.coverageCLimit ?? "",
-            coverageDLimit: claim.coverageDLimit ?? "",
-            policyExclusions: claim.policyExclusions ?? "",
-            policyEndorsements: claim.policyEndorsements ?? "",
-            coverageAnalysis: claim.coverageAnalysis ?? "",
-            policyNumber: detail.policyNumber,
-            carrierName: detail.carrierName,
-          }}
+          policies={claim.policies}
           policyDocs={claim.documents
             .filter((d) => d.docType === "POLICY")
             .map((d) => ({
@@ -308,6 +297,7 @@ export function OverviewTab({ claim, adjusters, editable }: ClaimWorkspaceProps)
               docType: d.docType,
               uploadedAt: d.uploadedAt,
               extractionStatus: d.extractionStatus,
+              policyLine: d.policyLine,
             }))}
         />
       </section>

@@ -78,6 +78,20 @@ enum PaymentType {
   FEE
 }
 
+/// Insurance product line for Coverage Protocol (multi-policy files)
+enum PolicyLine {
+  HOMEOWNERS
+  CONDO_MASTER
+  COMMERCIAL_PROPERTY
+  CGL
+  UMBRELLA
+  EXCESS
+  FLOOD
+  AUTO
+  WORKERS_COMP
+  OTHER
+}
+
 enum ContactKind {
   VENDOR
   CONTRACTOR
@@ -227,6 +241,7 @@ model Claim {
   tasks            ClaimTask[]
   notes            ClaimNote[]
   emails           ClaimEmail[]
+  policies         ClaimPolicy[]
 
   @@index([status])
   @@index([assignedAdjusterId])
@@ -280,13 +295,17 @@ model Document {
   extractedData    Json?
   /// AI_HOOK: set PENDING → COMPLETE/FAILED once extraction runs
   extractionStatus ExtractionStatus @default(NOT_APPLICABLE)
+  /// Optional product-line hint set at upload / parse time
+  policyLine       PolicyLine?
 
-  claim      Claim    @relation(fields: [claimId], references: [id], onDelete: Restrict)
-  uploadedBy Adjuster @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  claim      Claim         @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  uploadedBy Adjuster      @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  claimPolicies ClaimPolicy[]
 
   @@index([claimId])
   @@index([docType])
   @@index([uploadedById])
+  @@index([policyLine])
 }
 
 // ---------------------------------------------------------------------------
@@ -421,4 +440,42 @@ model ClaimEmail {
   createdBy Adjuster @relation("EmailLoggedBy", fields: [createdById], references: [id], onDelete: Restrict)
 
   @@index([claimId, emailDate])
+}
+
+// ---------------------------------------------------------------------------
+// ClaimPolicy — one or more insurance policies on a claim file
+// (HO, condo master, CGL, umbrella, flood, excess, etc.)
+// limits is a JSON array of { key, label, amount, notes? }
+// ---------------------------------------------------------------------------
+
+model ClaimPolicy {
+  id               String     @id @default(cuid())
+  claimId          String
+  line             PolicyLine @default(OTHER)
+  /// Display label e.g. "Primary Property" / "Master Flood"
+  label            String?
+  policyNumber     String?
+  carrierName      String?
+  namedInsured     String?
+  effectiveDate    DateTime?  @db.Date
+  expirationDate   DateTime?  @db.Date
+  /// Flexible coverage limits for the product line
+  limits           Json?
+  deductibleNotes  String?    @db.Text
+  exclusions       String?    @db.Text
+  endorsements     String?    @db.Text
+  analysis         String?    @db.Text
+  premium          Decimal?   @db.Decimal(14, 2)
+  documentId       String?
+  parsedAt         DateTime?
+  isPrimary        Boolean    @default(false)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  claim    Claim     @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  document Document? @relation(fields: [documentId], references: [id], onDelete: Restrict)
+
+  @@index([claimId])
+  @@index([line])
+  @@index([documentId])
 }

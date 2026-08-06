@@ -7,6 +7,7 @@ import type {
   ContactKind,
   TaskStatus,
   EmailDirection,
+  PolicyLine,
 } from "@prisma/client";
 
 export const STATUS_LABELS: Record<ClaimStatus, string> = {
@@ -20,7 +21,6 @@ export const STATUS_LABELS: Record<ClaimStatus, string> = {
   DENIED: "Denied",
 };
 
-/** Tailwind classes for status badges — deep red reserved for DENIED; gold for active pipeline */
 export const STATUS_BADGE_CLASS: Record<ClaimStatus, string> = {
   INTAKE: "border-brand-white/15 text-brand-white/70",
   UNDER_REVIEW: "border-brand-gold/30 text-brand-gold/90",
@@ -82,6 +82,19 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
 export const EMAIL_DIRECTION_LABELS: Record<EmailDirection, string> = {
   INBOUND: "Inbound",
   OUTBOUND: "Outbound",
+};
+
+export const POLICY_LINE_LABELS: Record<PolicyLine, string> = {
+  HOMEOWNERS: "Homeowners",
+  CONDO_MASTER: "Condo Master / Assoc. Property",
+  COMMERCIAL_PROPERTY: "Commercial Property",
+  CGL: "Commercial General Liability",
+  UMBRELLA: "Umbrella",
+  EXCESS: "Excess",
+  FLOOD: "Flood",
+  AUTO: "Auto",
+  WORKERS_COMP: "Workers Comp",
+  OTHER: "Other",
 };
 
 export const OPEN_STATUSES: ClaimStatus[] = [
