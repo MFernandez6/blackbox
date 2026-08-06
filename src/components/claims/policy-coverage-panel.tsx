@@ -325,7 +325,7 @@ export function PolicyCoveragePanel({
               size="sm"
               variant="solid"
               disabled={parsing || !selectedDocId}
-              onClick={parsePolicy}
+              onClick={() => void parsePolicy()}
             >
               {parsing ? "Parsing…" : "Parse Policy"}
             </Button>
