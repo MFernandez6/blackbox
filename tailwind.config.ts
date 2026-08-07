@@ -78,7 +78,11 @@ const config: Config = {
         ink: "#0F1C2E",
         paper: "#F4F4F4",
         hairline: "rgba(244, 244, 244, 0.12)",
-        denied: "#8B0000",
+        denied: {
+          DEFAULT: "#E89090",
+          soft: "#F5C4C4",
+          muted: "rgba(232, 144, 144, 0.12)",
+        },
       },
       boxShadow: {
         none: "none",

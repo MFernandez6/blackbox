@@ -29,7 +29,7 @@ export const STATUS_BADGE_CLASS: Record<ClaimStatus, string> = {
   NEGOTIATING: "border-brand-gold/60 bg-brand-gold/10 text-brand-gold",
   SETTLED: "border-brand-white/40 text-brand-white",
   CLOSED: "border-brand-white/10 text-brand-slate",
-  DENIED: "border-denied bg-denied/20 text-brand-white",
+  DENIED: "border-denied/50 bg-denied-muted text-denied-soft",
 };
 
 export const LOSS_TYPE_LABELS: Record<LossType, string> = {

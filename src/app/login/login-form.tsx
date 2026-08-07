@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema } from "@/lib/schemas/claim";
@@ -17,6 +17,8 @@ type LoginValues = z.infer<typeof loginSchema>;
 
 export default function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const idleNotice = searchParams.get("reason") === "idle";
   const [error, setError] = useState("");
   const {
     register,
@@ -76,6 +78,13 @@ export default function LoginForm() {
         </div>
 
         <div className="hairline mb-8" />
+
+        {idleNotice ? (
+          <ErrorBanner
+            message="Signed out after 5 minutes of inactivity. Sign in again to continue."
+            className="mb-6"
+          />
+        ) : null}
 
         {error ? (
           <ErrorBanner

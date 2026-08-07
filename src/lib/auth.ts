@@ -31,7 +31,12 @@ declare module "next-auth/jwt" {
 }
 
 export const authOptions: NextAuthOptions = {
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    // Absolute session ceiling; idle logout is enforced client-side at 5 minutes
+    maxAge: 8 * 60 * 60,
+    updateAge: 30 * 60,
+  },
   pages: {
     signIn: "/login",
   },

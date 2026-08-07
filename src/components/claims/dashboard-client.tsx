@@ -190,11 +190,11 @@ export function DashboardClient({
   }) {
     const active = sort === col;
     return (
-      <th className={cn("px-3 py-3 text-left", className)}>
+      <th className={cn("px-3 py-2.5 text-left align-middle", className)}>
         <Link
           href={sortLink(col)}
           className={cn(
-            "font-sans text-[10px] font-bold uppercase tracking-[0.2em] hover:text-brand-gold",
+            "inline-block font-sans text-[10px] font-bold uppercase tracking-[0.2em] hover:text-brand-gold",
             active ? "text-brand-white" : "text-brand-slate"
           )}
         >
@@ -401,11 +401,11 @@ export function DashboardClient({
             ) : null}
           </div>
         ) : (
-          <table className="w-full min-w-[1100px] text-sm">
-            <thead className="border-b border-brand-white/10 bg-brand-navy-deep/50">
-              <tr>
+          <table className="w-full min-w-[1100px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-brand-white/10 bg-brand-navy-deep/50">
                 {canEditClaims ? (
-                  <th className="w-10 px-2 py-3">
+                  <th className="w-10 px-3 py-2.5 text-left align-middle">
                     <Checkbox
                       checked={allSelected}
                       onCheckedChange={(c) => toggleAll(!!c)}
@@ -435,7 +435,7 @@ export function DashboardClient({
                   className="border-b border-brand-white/10 last:border-0 hover:bg-brand-gold/5"
                 >
                   {canEditClaims ? (
-                    <td className="px-2 py-2">
+                    <td className="w-10 px-3 py-2.5 align-middle">
                       <Checkbox
                         checked={selected.has(c.id)}
                         onCheckedChange={(checked) => toggleOne(c.id, !!checked)}
@@ -443,7 +443,7 @@ export function DashboardClient({
                       />
                     </td>
                   ) : null}
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2.5 align-middle">
                     <Link
                       href={`/claims/${c.id}`}
                       className="font-mono text-xs tracking-wide text-brand-gold hover:underline"
@@ -451,20 +451,20 @@ export function DashboardClient({
                       {c.claimNumber}
                     </Link>
                   </td>
-                  <td className="px-3 py-2 font-mono text-xs text-brand-white/80">
+                  <td className="px-3 py-2.5 align-middle font-mono text-xs text-brand-white/80">
                     {c.insurerClaimNumber ?? "—"}
                   </td>
-                  <td className="px-3 py-2 text-brand-white/90">{c.primaryClaimant}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2.5 align-middle text-brand-white/90">{c.primaryClaimant}</td>
+                  <td className="px-3 py-2.5 align-middle">
                     <StatusBadge status={c.status} />
                   </td>
-                  <td className="px-3 py-2 font-mono text-xs uppercase tracking-wider text-brand-slate">
+                  <td className="px-3 py-2.5 align-middle font-mono text-xs uppercase tracking-wider text-brand-slate">
                     {LOSS_TYPE_LABELS[c.lossType]}
                   </td>
-                  <td className="px-3 py-2 font-mono text-xs text-brand-slate">
+                  <td className="px-3 py-2.5 align-middle font-mono text-xs text-brand-slate">
                     {format(new Date(c.dateOfLoss), "yyyy-MM-dd")}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2.5 align-middle">
                     {canEditClaims ? (
                       <Select
                         value={c.assignedAdjusterId ?? "none"}
@@ -488,10 +488,10 @@ export function DashboardClient({
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-2 font-mono text-xs">
+                  <td className="px-3 py-2.5 align-middle font-mono text-xs">
                     {daysOpen(c.createdAt)}
                   </td>
-                  <td className="px-3 py-2 text-right font-mono text-xs">
+                  <td className="px-3 py-2.5 align-middle text-right font-mono text-xs">
                     {formatCurrency(c.estimatedValue)}
                   </td>
                 </tr>

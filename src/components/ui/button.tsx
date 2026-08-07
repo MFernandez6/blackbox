@@ -17,7 +17,7 @@ const buttonVariants = cva(
         ghost:
           "border-transparent bg-transparent text-brand-slate hover:text-brand-gold",
         destructive:
-          "border-denied bg-denied/20 text-brand-white hover:bg-denied/35",
+          "border-denied/50 bg-denied-muted text-denied-soft hover:bg-denied/20",
         secondary:
           "border-brand-white/15 bg-brand-navy-deep/60 text-brand-white hover:border-brand-gold/30",
       },

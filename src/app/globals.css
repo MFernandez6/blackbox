@@ -43,7 +43,8 @@
     --brand-white: #f4f4f4;
     --brand-slate: #8b95a5;
     --brand-hairline: rgba(244, 244, 244, 0.12);
-    --denied: #8b0000;
+    /* Coral alert — readable on navy (not dark crimson) */
+    --denied: #e89090;
   }
 
   * {

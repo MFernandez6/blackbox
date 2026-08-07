@@ -181,7 +181,7 @@ export function ClaimDetailClient({
                   </Badge>
                 ) : null}
                 {claim.isArchived ? (
-                  <Badge className="border-denied font-serif text-denied">
+                  <Badge className="border-denied/50 bg-denied-muted font-serif text-denied-soft">
                     Archived
                   </Badge>
                 ) : null}
