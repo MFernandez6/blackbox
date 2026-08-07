@@ -109,6 +109,15 @@ export type ClaimDetailData = {
     uploaderName: string;
     extractionStatus: string;
     policyLine: PolicyLine | null;
+    isCertifiedPolicy: boolean;
+  }>;
+  auditEvents: Array<{
+    id: string;
+    action: string;
+    entityType: string;
+    summary: string;
+    createdAt: string;
+    actorName: string;
   }>;
   payments: Array<{
     id: string;

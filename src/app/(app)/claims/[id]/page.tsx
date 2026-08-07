@@ -61,6 +61,11 @@ async function ClaimDetailDataLoader({
       policies: {
         orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
       },
+      auditEvents: {
+        orderBy: { createdAt: "desc" },
+        take: 40,
+        include: { actor: { select: { name: true } } },
+      },
     },
   });
 
@@ -175,6 +180,15 @@ async function ClaimDetailDataLoader({
       uploaderName: d.uploadedBy.name,
       extractionStatus: d.extractionStatus,
       policyLine: d.policyLine,
+      isCertifiedPolicy: d.isCertifiedPolicy,
+    })),
+    auditEvents: claim.auditEvents.map((e) => ({
+      id: e.id,
+      action: e.action,
+      entityType: e.entityType,
+      summary: e.summary,
+      createdAt: e.createdAt.toISOString(),
+      actorName: e.actor.name,
     })),
     payments: claim.payments.map((p) => ({
       id: p.id,

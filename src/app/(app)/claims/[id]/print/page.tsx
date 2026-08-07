@@ -47,11 +47,17 @@ export default async function ClaimPrintPage({
     (sum, p) => sum + Number(p.amount),
     0
   );
+  const feePct = Number(claim.contingencyFeePercent);
+  const feeBase = Number(
+    claim.settlementAmount ?? claim.demandAmount ?? claim.estimatedValue ?? 0
+  );
+  const projectedFee = feeBase * (feePct / 100);
+  const outstanding = Number(claim.settlementAmount ?? 0) - paymentTotal;
 
   return (
-    <ClaimPrintActions>
+    <ClaimPrintActions claimNumber={claim.claimNumber}>
       <header className="border-b border-brand-white/10 pb-4">
-        <p className="eyebrow">Claim Summary Sheet</p>
+        <p className="eyebrow">Demand Packet / Claim Summary</p>
         <div className="mt-2 flex flex-wrap items-end gap-x-8 gap-y-2">
           <div>
             <p className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
@@ -240,6 +246,21 @@ export default async function ClaimPrintPage({
             mono
           />
           <PrintField label="Settlement Date" value={fmtDate(claim.settlementDate)} mono />
+          <PrintField
+            label={`Contingency Fee (${feePct}%)`}
+            value={formatCurrency(String(projectedFee))}
+            mono
+          />
+          <PrintField
+            label="Fee Base"
+            value={formatCurrency(String(feeBase))}
+            mono
+          />
+          <PrintField
+            label="Outstanding vs Settlement"
+            value={formatCurrency(String(outstanding))}
+            mono
+          />
         </dl>
         {claim.settlementNotes ? (
           <div className="mt-3">

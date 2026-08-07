@@ -224,20 +224,21 @@ export function FnolWizard() {
                 ) : null}
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="First Name" error={form.formState.errors.claimants?.[index]?.firstName?.message}>
+                <Field label="First Name" required error={form.formState.errors.claimants?.[index]?.firstName?.message}>
                   <Input {...form.register(`claimants.${index}.firstName`)} />
                 </Field>
-                <Field label="Last Name" error={form.formState.errors.claimants?.[index]?.lastName?.message}>
+                <Field label="Last Name" required error={form.formState.errors.claimants?.[index]?.lastName?.message}>
                   <Input {...form.register(`claimants.${index}.lastName`)} />
                 </Field>
-                <Field label="Email" error={form.formState.errors.claimants?.[index]?.email?.message}>
+                <Field label="Email" required error={form.formState.errors.claimants?.[index]?.email?.message}>
                   <Input type="email" {...form.register(`claimants.${index}.email`)} />
                 </Field>
-                <Field label="Phone" error={form.formState.errors.claimants?.[index]?.phone?.message}>
+                <Field label="Phone" required error={form.formState.errors.claimants?.[index]?.phone?.message}>
                   <Input {...form.register(`claimants.${index}.phone`)} />
                 </Field>
                 <Field
                   label="Mailing Address"
+                  required
                   className="sm:col-span-2"
                   error={form.formState.errors.claimants?.[index]?.mailingAddress?.message}
                 >
@@ -310,11 +311,11 @@ export function FnolWizard() {
 
       {step === 1 && (
         <div className="space-y-4 border border-brand-white/10 p-5">
-          <Field label="Property Address" error={form.formState.errors.property?.propertyAddress?.message}>
+          <Field label="Property Address" required error={form.formState.errors.property?.propertyAddress?.message}>
             <Input {...form.register("property.propertyAddress")} />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="ZIP" error={form.formState.errors.property?.zipCode?.message}>
+            <Field label="ZIP" required error={form.formState.errors.property?.zipCode?.message}>
               <Input
                 {...form.register("property.zipCode", {
                   onChange: (e) => {
@@ -328,10 +329,10 @@ export function FnolWizard() {
                 })}
               />
             </Field>
-            <Field label="County" error={form.formState.errors.property?.county?.message}>
+            <Field label="County" required error={form.formState.errors.property?.county?.message}>
               <Input {...form.register("property.county")} />
             </Field>
-            <Field label="Loss Type">
+            <Field label="Loss Type" required>
               <Select
                 value={form.watch("property.lossType")}
                 onValueChange={(v) =>
@@ -350,11 +351,11 @@ export function FnolWizard() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Date of Loss" error={form.formState.errors.property?.dateOfLoss?.message}>
+            <Field label="Date of Loss" required error={form.formState.errors.property?.dateOfLoss?.message}>
               <Input type="date" {...form.register("property.dateOfLoss")} />
             </Field>
           </div>
-          <Field label="Loss Description" error={form.formState.errors.property?.lossDescription?.message}>
+          <Field label="Loss Description" required error={form.formState.errors.property?.lossDescription?.message}>
             <Textarea rows={4} {...form.register("property.lossDescription")} />
           </Field>
           <div className="flex items-center gap-2 border-t border-brand-white/10 pt-4">
@@ -491,24 +492,41 @@ export function FnolWizard() {
         </div>
       )}
 
-      <div className="flex flex-col gap-3 border-t border-brand-white/10 pt-6 sm:flex-row sm:justify-between">
-        <Button
-          type="button"
-          variant="outline"
-          disabled={step === 0}
-          onClick={() => setStep((s) => s - 1)}
-        >
-          Back
-        </Button>
-        {step < 3 ? (
-          <Button type="button" onClick={next}>
-            Continue
-          </Button>
-        ) : (
-          <Button type="button" onClick={submit}>
-            Seal Record
-          </Button>
-        )}
+      <div className="sticky bottom-0 z-10 -mx-4 mt-6 border-t border-brand-white/10 bg-brand-navy/95 px-4 py-4 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={step === 0}
+              onClick={() => setStep((s) => s - 1)}
+            >
+              Back
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                persist();
+                toast.success("Draft saved on this device");
+              }}
+            >
+              Save Draft
+            </Button>
+          </div>
+          {step < 3 ? (
+            <Button type="button" className="w-full sm:w-auto" onClick={next}>
+              Continue
+            </Button>
+          ) : (
+            <Button type="button" className="w-full sm:w-auto" onClick={submit}>
+              Seal Record
+            </Button>
+          )}
+        </div>
+        <p className="mt-2 text-center font-mono text-[10px] uppercase tracking-wider text-brand-slate sm:text-left">
+          * Required fields · Draft stays in this browser until sealed
+        </p>
       </div>
     </div>
   );
@@ -519,15 +537,20 @@ function Field({
   children,
   error,
   className,
+  required,
 }: {
   label: string;
   children: React.ReactNode;
   error?: string;
   className?: string;
+  required?: boolean;
 }) {
   return (
     <div className={`min-w-0 space-y-2 ${className ?? ""}`}>
-      <Label>{label}</Label>
+      <Label>
+        {label}
+        {required ? <span className="ml-1 text-brand-gold">*</span> : null}
+      </Label>
       {children}
       {error ? <p className="text-xs text-denied">{error}</p> : null}
     </div>

@@ -7,6 +7,7 @@ import {
   DashboardClient,
   type DashboardClaimRow,
 } from "@/components/claims/dashboard-client";
+import { DashboardMyWork } from "@/components/claims/dashboard-my-work";
 import { DashboardSkeleton } from "@/components/claims/dashboard-skeleton";
 
 export const dynamic = "force-dynamic";
@@ -32,13 +33,14 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
   const sort = searchParams.sort ?? "updatedAt";
   const dir = searchParams.dir === "asc" ? "asc" : "desc";
 
-  const where: Prisma.ClaimWhereInput = {
+  const scopeWhere: Prisma.ClaimWhereInput = {
     isArchived: false,
   };
-
   if (session.user.role === "ADJUSTER") {
-    where.assignedAdjusterId = session.user.id;
+    scopeWhere.assignedAdjusterId = session.user.id;
   }
+
+  const where: Prisma.ClaimWhereInput = { ...scopeWhere };
 
   if (statuses.length) where.status = { in: statuses };
   if (searchParams.adjuster) where.assignedAdjusterId = searchParams.adjuster;
@@ -97,7 +99,32 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
     }
   })();
 
-  const [claims, adjusters, statusGroups, openAgg] = await Promise.all([
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const weekOut = new Date(today);
+  weekOut.setDate(weekOut.getDate() + 7);
+
+  const taskWhere: Prisma.ClaimTaskWhereInput = {
+    status: { in: ["OPEN", "IN_PROGRESS"] },
+    claim: scopeWhere,
+    OR: [
+      { assignedToId: session.user.id },
+      ...(session.user.role === "ADMIN"
+        ? [{ assignedToId: null as string | null }]
+        : []),
+    ],
+  };
+
+  const [
+    claims,
+    adjusters,
+    statusGroups,
+    openAgg,
+    myTasks,
+    openClaimsForDates,
+    unassignedClaims,
+    recentNotes,
+  ] = await Promise.all([
     prisma.claim.findMany({
       where,
       orderBy,
@@ -113,18 +140,107 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
     }),
     prisma.claim.groupBy({
       by: ["status"],
-      where: { isArchived: false },
+      where: scopeWhere,
       _count: { _all: true },
     }),
     prisma.claim.aggregate({
       where: {
-        isArchived: false,
+        ...scopeWhere,
         status: { in: OPEN_STATUSES },
       },
       _count: { _all: true },
       _sum: { estimatedValue: true },
     }),
+    prisma.claimTask.findMany({
+      where: taskWhere,
+      orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+      take: 8,
+      include: { claim: { select: { id: true, claimNumber: true } } },
+    }),
+    prisma.claim.findMany({
+      where: {
+        ...scopeWhere,
+        status: { in: OPEN_STATUSES },
+        OR: [
+          { scheduledAppointmentDate: { lt: today } },
+          { initialContactDate: null },
+          { estimateSentDate: null, estimateCreatedDate: { lt: today } },
+        ],
+      },
+      select: {
+        id: true,
+        claimNumber: true,
+        status: true,
+        scheduledAppointmentDate: true,
+        initialContactDate: true,
+        estimateCreatedDate: true,
+        estimateSentDate: true,
+      },
+      take: 20,
+    }),
+    session.user.role === "ADMIN"
+      ? prisma.claim.findMany({
+          where: {
+            isArchived: false,
+            assignedAdjusterId: null,
+            status: { in: OPEN_STATUSES },
+          },
+          select: {
+            id: true,
+            claimNumber: true,
+            status: true,
+            propertyAddress: true,
+          },
+          orderBy: { updatedAt: "desc" },
+          take: 8,
+        })
+      : Promise.resolve([]),
+    prisma.claimNote.findMany({
+      where: { claim: scopeWhere },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      include: {
+        claim: { select: { id: true, claimNumber: true } },
+        createdBy: { select: { name: true } },
+      },
+    }),
   ]);
+
+  const overdueDates = openClaimsForDates.flatMap((c) => {
+    const rows: Array<{
+      claimId: string;
+      claimNumber: string;
+      label: string;
+      date: string;
+      status: ClaimStatus;
+    }> = [];
+    if (
+      c.scheduledAppointmentDate &&
+      c.scheduledAppointmentDate < today
+    ) {
+      rows.push({
+        claimId: c.id,
+        claimNumber: c.claimNumber,
+        label: "Scheduled appointment overdue",
+        date: c.scheduledAppointmentDate.toISOString(),
+        status: c.status,
+      });
+    }
+    if (
+      c.estimateCreatedDate &&
+      !c.estimateSentDate &&
+      c.estimateCreatedDate < today
+    ) {
+      rows.push({
+        claimId: c.id,
+        claimNumber: c.claimNumber,
+        label: "Estimate created — not sent",
+        date: c.estimateCreatedDate.toISOString(),
+        status: c.status,
+      });
+    }
+    return rows;
+  }).slice(0, 8);
 
   const rows: DashboardClaimRow[] = claims.map((c) => {
     const primary = c.claimants[0];
@@ -166,20 +282,48 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
   }
 
   return (
-    <DashboardClient
-      claims={rows}
-      summary={{
-        openCount: openAgg._count._all,
-        byStatus,
-        pipelineValue: Number(openAgg._sum.estimatedValue ?? 0),
-      }}
-      adjusters={adjusters}
-      canCreate={canEdit(session.user.role)}
-      canEditClaims={canEdit(session.user.role)}
-      canManage={session.user.role === "ADMIN"}
-      role={session.user.role}
-      currentUserId={session.user.id}
-    />
+    <div className="space-y-6">
+      <DashboardMyWork
+        showUnassigned={session.user.role === "ADMIN"}
+        tasks={myTasks.map((t) => ({
+          id: t.id,
+          title: t.title,
+          status: t.status,
+          dueDate: t.dueDate?.toISOString() ?? null,
+          claimId: t.claim.id,
+          claimNumber: t.claim.claimNumber,
+        }))}
+        overdueDates={overdueDates}
+        unassigned={unassignedClaims.map((c) => ({
+          id: c.id,
+          claimNumber: c.claimNumber,
+          status: c.status,
+          propertyAddress: c.propertyAddress,
+        }))}
+        notes={recentNotes.map((n) => ({
+          id: n.id,
+          body: n.body,
+          createdAt: n.createdAt.toISOString(),
+          claimId: n.claim.id,
+          claimNumber: n.claim.claimNumber,
+          authorName: n.createdBy.name,
+        }))}
+      />
+      <DashboardClient
+        claims={rows}
+        summary={{
+          openCount: openAgg._count._all,
+          byStatus,
+          pipelineValue: Number(openAgg._sum.estimatedValue ?? 0),
+        }}
+        adjusters={adjusters}
+        canCreate={canEdit(session.user.role)}
+        canEditClaims={canEdit(session.user.role)}
+        canManage={session.user.role === "ADMIN"}
+        role={session.user.role}
+        currentUserId={session.user.id}
+      />
+    </div>
   );
 }
 

@@ -390,9 +390,11 @@ export async function updateCoverageAction(
   raw: unknown
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession();
-    if (!canEdit(session.user.role)) {
-      return { ok: false, error: "Insufficient privileges to edit." };
+    const { assertCanEditClaim } = await import("@/lib/claims/access");
+    const { logClaimAudit } = await import("@/lib/claims/audit");
+    const gate = await assertCanEditClaim(claimId);
+    if (gate.error || !gate.session) {
+      return { ok: false, error: gate.error ?? "Unauthorized." };
     }
 
     const parsed = coverageUpdateSchema.safeParse(raw);
@@ -417,6 +419,15 @@ export async function updateCoverageAction(
         policyNumber: d.policyNumber || null,
         carrierName: d.carrierName || null,
       },
+    });
+
+    await logClaimAudit({
+      claimId,
+      actorId: gate.session.user.id,
+      action: "COVERAGE_UPDATE",
+      entityType: "Claim",
+      entityId: claimId,
+      summary: "Updated legacy coverage / policy fields on claim",
     });
 
     revalidatePath(`/claims/${claimId}`);

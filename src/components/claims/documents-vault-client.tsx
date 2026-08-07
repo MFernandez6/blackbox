@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
@@ -9,11 +9,18 @@ import type { DocType, AdjusterRole, PolicyLine } from "@prisma/client";
 import { DOC_TYPE_LABELS, POLICY_LINE_LABELS } from "@/lib/claims/labels";
 import { canEdit } from "@/lib/auth-client";
 import { parsePolicyDocumentAction } from "@/lib/actions/claim-policies";
+import {
+  deleteDocumentAction,
+  renameDocumentAction,
+  replaceDocumentFileAction,
+  updateDocumentMetaAction,
+} from "@/lib/actions/documents";
 import { DocumentUploadDialog } from "@/components/claims/document-upload-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import {
   Select,
@@ -41,6 +48,7 @@ type Doc = {
   uploaderName: string;
   extractionStatus?: string;
   policyLine?: PolicyLine | null;
+  isCertifiedPolicy?: boolean;
 };
 
 type Props = {
@@ -81,6 +89,27 @@ function canParseAsPolicy(doc: Doc) {
   );
 }
 
+function extractionBadgeClass(status: string) {
+  switch (status) {
+    case "COMPLETE":
+      return "border-brand-gold text-brand-gold";
+    case "PENDING":
+      return "border-brand-slate/50 text-brand-slate";
+    case "FAILED":
+      return "border-denied text-denied";
+    case "NOT_APPLICABLE":
+      return "border-brand-white/10 text-brand-slate/70";
+    default:
+      return "border-brand-white/10 text-brand-slate";
+  }
+}
+
+function ExtractionBadge({ status }: { status: string }) {
+  return (
+    <Badge className={extractionBadgeClass(status)}>{status}</Badge>
+  );
+}
+
 export function DocumentsVaultClient({
   claimId,
   claimNumber,
@@ -90,6 +119,7 @@ export function DocumentsVaultClient({
 }: Props) {
   const router = useRouter();
   const editable = canEdit(role);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("date");
@@ -99,6 +129,12 @@ export function DocumentsVaultClient({
   const [parseHint, setParseHint] = useState<PolicyLine | "AUTO">("AUTO");
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState("");
+  const [manageDoc, setManageDoc] = useState<Doc | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [metaDocType, setMetaDocType] = useState<DocType>("OTHER");
+  const [certified, setCertified] = useState(false);
+  const [managing, setManaging] = useState(false);
+  const [manageError, setManageError] = useState("");
 
   const counts = useMemo(() => {
     const byType = {} as Record<DocType, number>;
@@ -136,6 +172,20 @@ export function DocumentsVaultClient({
     setParseDoc(doc);
   }
 
+  function openManage(doc: Doc) {
+    setManageError("");
+    setManageDoc(doc);
+    setRenameValue(doc.fileName);
+    setMetaDocType(doc.docType);
+    setCertified(!!doc.isCertifiedPolicy);
+  }
+
+  function closeManage() {
+    setManageDoc(null);
+    setManageError("");
+    setManaging(false);
+  }
+
   async function runParse() {
     if (!parseDoc) return;
     setParseError("");
@@ -157,6 +207,121 @@ export function DocumentsVaultClient({
       router.refresh();
     } finally {
       setParsing(false);
+    }
+  }
+
+  async function saveRename() {
+    if (!manageDoc) return;
+    const fileName = renameValue.trim();
+    if (!fileName) {
+      setManageError("File name is required.");
+      return;
+    }
+    setManageError("");
+    setManaging(true);
+    try {
+      const result = await renameDocumentAction(claimId, {
+        documentId: manageDoc.id,
+        fileName,
+      });
+      if (!result.ok) {
+        setManageError(result.error);
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Document renamed");
+      setManageDoc({ ...manageDoc, fileName });
+      router.refresh();
+    } finally {
+      setManaging(false);
+    }
+  }
+
+  async function saveMeta(next?: {
+    docType?: DocType;
+    isCertifiedPolicy?: boolean;
+  }) {
+    if (!manageDoc) return;
+    const docType = next?.docType ?? metaDocType;
+    const isCertifiedPolicy = next?.isCertifiedPolicy ?? certified;
+    setManageError("");
+    setManaging(true);
+    try {
+      const result = await updateDocumentMetaAction(claimId, {
+        documentId: manageDoc.id,
+        docType,
+        isCertifiedPolicy,
+      });
+      if (!result.ok) {
+        setManageError(result.error);
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Document updated");
+      setMetaDocType(docType);
+      setCertified(isCertifiedPolicy);
+      setManageDoc({
+        ...manageDoc,
+        docType,
+        isCertifiedPolicy,
+      });
+      router.refresh();
+    } finally {
+      setManaging(false);
+    }
+  }
+
+  async function onReplaceFile(file: File | undefined) {
+    if (!manageDoc || !file) return;
+    setManageError("");
+    setManaging(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const result = await replaceDocumentFileAction(
+        claimId,
+        manageDoc.id,
+        formData
+      );
+      if (!result.ok) {
+        setManageError(result.error);
+        toast.error(result.error);
+        return;
+      }
+      toast.success("File replaced");
+      closeManage();
+      setPreviewDoc(null);
+      router.refresh();
+    } finally {
+      setManaging(false);
+      if (replaceInputRef.current) replaceInputRef.current.value = "";
+    }
+  }
+
+  async function onDelete() {
+    if (!manageDoc) return;
+    if (
+      !confirm(
+        `Delete “${manageDoc.fileName}”? This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setManageError("");
+    setManaging(true);
+    try {
+      const result = await deleteDocumentAction(claimId, manageDoc.id);
+      if (!result.ok) {
+        setManageError(result.error);
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Document deleted");
+      closeManage();
+      setPreviewDoc(null);
+      router.refresh();
+    } finally {
+      setManaging(false);
     }
   }
 
@@ -323,10 +488,13 @@ export function DocumentsVaultClient({
                       <span className="truncate text-brand-white">
                         {d.fileName}
                       </span>
-                      {d.extractionStatus ? (
-                        <Badge className="border-brand-white/10 text-brand-slate">
-                          {d.extractionStatus}
+                      {d.isCertifiedPolicy ? (
+                        <Badge className="border-brand-gold text-brand-gold">
+                          Certified
                         </Badge>
+                      ) : null}
+                      {d.extractionStatus ? (
+                        <ExtractionBadge status={d.extractionStatus} />
                       ) : null}
                     </div>
                   </td>
@@ -339,23 +507,32 @@ export function DocumentsVaultClient({
                   <td className="px-3 py-2 text-brand-slate">{d.uploaderName}</td>
                   {editable ? (
                     <td className="px-3 py-2 text-right">
-                      {canParseAsPolicy(d) ? (
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        {canParseAsPolicy(d) ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openParse(d);
+                            }}
+                          >
+                            Parse
+                          </Button>
+                        ) : null}
                         <Button
                           type="button"
                           size="sm"
                           variant="outline"
                           onClick={(e) => {
                             e.stopPropagation();
-                            openParse(d);
+                            openManage(d);
                           }}
                         >
-                          Parse
+                          Manage
                         </Button>
-                      ) : (
-                        <span className="font-mono text-[10px] text-brand-slate">
-                          —
-                        </span>
-                      )}
+                      </div>
                     </td>
                   ) : null}
                 </tr>
@@ -395,27 +572,45 @@ export function DocumentsVaultClient({
                       · {previewDoc.uploaderName}
                     </dd>
                   </div>
+                  {previewDoc.isCertifiedPolicy ? (
+                    <div>
+                      <dt className="eyebrow">Status</dt>
+                      <dd>
+                        <Badge className="border-brand-gold text-brand-gold">
+                          Certified
+                        </Badge>
+                      </dd>
+                    </div>
+                  ) : null}
                   {previewDoc.extractionStatus ? (
                     <div>
                       <dt className="eyebrow">Extraction</dt>
                       <dd>
-                        <Badge className="border-brand-white/10 text-brand-slate">
-                          {previewDoc.extractionStatus}
-                        </Badge>
+                        <ExtractionBadge status={previewDoc.extractionStatus} />
                       </dd>
                     </div>
                   ) : null}
                 </dl>
 
-                {editable && canParseAsPolicy(previewDoc) ? (
+                {editable ? (
                   <div className="flex flex-wrap gap-2">
+                    {canParseAsPolicy(previewDoc) ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="solid"
+                        onClick={() => openParse(previewDoc)}
+                      >
+                        Parse as Policy
+                      </Button>
+                    ) : null}
                     <Button
                       type="button"
                       size="sm"
-                      variant="solid"
-                      onClick={() => openParse(previewDoc)}
+                      variant="outline"
+                      onClick={() => openManage(previewDoc)}
                     >
-                      Parse as Policy
+                      Manage
                     </Button>
                   </div>
                 ) : null}
@@ -531,6 +726,137 @@ export function DocumentsVaultClient({
               onClick={() => void runParse()}
             >
               {parsing ? "Parsing…" : "Parse Policy"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!manageDoc}
+        onOpenChange={(open) => {
+          if (!open && !managing) closeManage();
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <p className="eyebrow">File Integrity</p>
+            <DialogTitle>Manage Document</DialogTitle>
+          </DialogHeader>
+
+          {manageError ? (
+            <ErrorBanner
+              message={manageError}
+              onDismiss={() => setManageError("")}
+            />
+          ) : null}
+
+          {manageDoc ? (
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="doc-rename">Rename</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="doc-rename"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    disabled={managing}
+                    className="h-9"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="solid"
+                    disabled={managing || !renameValue.trim()}
+                    onClick={() => void saveRename()}
+                  >
+                    Save
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Document type</Label>
+                <Select
+                  value={metaDocType}
+                  disabled={managing}
+                  onValueChange={(v) => {
+                    const next = v as DocType;
+                    setMetaDocType(next);
+                    void saveMeta({ docType: next });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ALL_DOC_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {DOC_TYPE_LABELS[t]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="doc-certified"
+                  checked={certified}
+                  disabled={managing}
+                  onCheckedChange={(c) => {
+                    const next = !!c;
+                    setCertified(next);
+                    void saveMeta({ isCertifiedPolicy: next });
+                  }}
+                />
+                <Label htmlFor="doc-certified" className="cursor-pointer">
+                  Certified policy
+                </Label>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Replace file</Label>
+                <input
+                  ref={replaceInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    void onReplaceFile(file);
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={managing}
+                  onClick={() => replaceInputRef.current?.click()}
+                >
+                  Choose replacement…
+                </Button>
+              </div>
+
+              <div className="border-t border-brand-white/10 pt-4">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="destructive"
+                  disabled={managing}
+                  onClick={() => void onDelete()}
+                >
+                  Delete document
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={managing}
+              onClick={() => closeManage()}
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

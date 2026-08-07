@@ -2,19 +2,28 @@
  * BLACKBOX seed — sample Adjusters + Claims for local/dev review.
  *
  * Run (once Prisma Client is generated and DATABASE_URL is set):
- *   npx prisma db seed
+ *   ALLOW_DESTRUCTIVE_SEED=1 npx prisma db seed
  *
  * Or directly:
- *   npx tsx prisma/seed.ts
+ *   ALLOW_DESTRUCTIVE_SEED=1 npx tsx prisma/seed.ts
  *
  * Default passwords for all seeded adjusters: Password123!
  * (bcrypt cost 10 — change immediately in any shared environment)
+ *
+ * NEVER run against production. This script wipes claims/users.
  */
 
 import { PrismaClient, ClaimStatus, LossType, PreferredContactMethod, DocType, PaymentType, AdjusterRole, ContactKind, TaskStatus, EmailDirection } from "@prisma/client";
 import { hash } from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+if (process.env.ALLOW_DESTRUCTIVE_SEED !== "1") {
+  console.error(
+    "Refusing to seed: set ALLOW_DESTRUCTIVE_SEED=1 to run this destructive wipe+seed script. Never use on production."
+  );
+  process.exit(1);
+}
 
 const SEED_PASSWORD = "Password123!";
 
@@ -112,6 +121,8 @@ async function main() {
   await prisma.claimTask.deleteMany();
   await prisma.claimContact.deleteMany();
   await prisma.payment.deleteMany();
+  await prisma.claimAuditEvent.deleteMany();
+  await prisma.claimPolicy.deleteMany();
   await prisma.document.deleteMany();
   await prisma.statusHistory.deleteMany();
   await prisma.claimant.deleteMany();

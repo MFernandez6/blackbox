@@ -173,7 +173,14 @@ export function DemandSettlementTab({
       </section>
 
       <section className="border border-brand-white/10 p-4 sm:p-5">
-        <p className="eyebrow mb-4">Fee Calc Summary</p>
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <p className="eyebrow">Fee Calc Summary</p>
+          <Button asChild size="sm" variant="outline">
+            <a href={`/claims/${claim.id}/print`} target="_blank" rel="noreferrer">
+              Demand Packet PDF
+            </a>
+          </Button>
+        </div>
         <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryStat
             label="Contingency"

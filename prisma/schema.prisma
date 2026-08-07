@@ -150,6 +150,7 @@ model Adjuster {
   notesCreated   ClaimNote[]     @relation("NoteAuthor")
   emailsLogged   ClaimEmail[]    @relation("EmailLoggedBy")
   contactsAdded  ClaimContact[]  @relation("ContactCreator")
+  auditEvents    ClaimAuditEvent[] @relation("AuditActor")
 }
 
 // ---------------------------------------------------------------------------
@@ -242,6 +243,7 @@ model Claim {
   notes            ClaimNote[]
   emails           ClaimEmail[]
   policies         ClaimPolicy[]
+  auditEvents      ClaimAuditEvent[]
 
   @@index([status])
   @@index([assignedAdjusterId])
@@ -297,6 +299,8 @@ model Document {
   extractionStatus ExtractionStatus @default(NOT_APPLICABLE)
   /// Optional product-line hint set at upload / parse time
   policyLine       PolicyLine?
+  /// Marked as the certified policy copy used for Coverage Protocol
+  isCertifiedPolicy Boolean         @default(false)
 
   claim      Claim         @relation(fields: [claimId], references: [id], onDelete: Restrict)
   uploadedBy Adjuster      @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
@@ -306,6 +310,7 @@ model Document {
   @@index([docType])
   @@index([uploadedById])
   @@index([policyLine])
+  @@index([isCertifiedPolicy])
 }
 
 // ---------------------------------------------------------------------------
@@ -478,4 +483,27 @@ model ClaimPolicy {
   @@index([claimId])
   @@index([line])
   @@index([documentId])
+}
+
+// ---------------------------------------------------------------------------
+// ClaimAuditEvent — append-only trust log (uploads, parse, coverage edits, etc.)
+// ---------------------------------------------------------------------------
+
+model ClaimAuditEvent {
+  id         String   @id @default(cuid())
+  claimId    String
+  actorId    String
+  action     String
+  entityType String
+  entityId   String?
+  summary    String
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  claim Claim    @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  actor Adjuster @relation("AuditActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([claimId, createdAt])
+  @@index([actorId])
+  @@index([action])
 }

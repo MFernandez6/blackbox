@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { Prisma, type PolicyLine } from "@prisma/client";
 import { z } from "zod";
-import { requireSession, canEdit } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logClaimAudit } from "@/lib/claims/audit";
+import { assertCanEditClaim } from "@/lib/claims/access";
 import {
   isPolicyExtractionResult,
   limitsToLegacyHo,
@@ -65,9 +66,9 @@ export async function parsePolicyDocumentAction(
   hintLine?: PolicyLine | null
 ): Promise<ActionResult<{ applied: boolean; message: string; policyId?: string }>> {
   try {
-    const session = await requireSession();
-    if (!canEdit(session.user.role)) {
-      return { ok: false, error: "Insufficient privileges to parse policy." };
+    const gate = await assertCanEditClaim(claimId);
+    if (gate.error || !gate.session) {
+      return { ok: false, error: gate.error ?? "Unauthorized." };
     }
 
     let doc = documentId
@@ -130,6 +131,16 @@ export async function parsePolicyDocumentAction(
           doc.id,
           extracted
         );
+
+        await logClaimAudit({
+          claimId,
+          actorId: gate.session.user.id,
+          action: "POLICY_PARSE",
+          entityType: "Document",
+          entityId: doc.id,
+          summary: `Parsed “${doc.fileName}” as ${coercePolicyLine(extracted.policyLine)}`,
+          meta: { policyId, line: coercePolicyLine(extracted.policyLine) },
+        });
 
         revalidateClaim(claimId);
         return {
@@ -265,9 +276,9 @@ export async function updateClaimPolicyAction(
   raw: unknown
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession();
-    if (!canEdit(session.user.role)) {
-      return { ok: false, error: "Insufficient privileges." };
+    const gate = await assertCanEditClaim(claimId);
+    if (gate.error || !gate.session) {
+      return { ok: false, error: gate.error ?? "Unauthorized." };
     }
 
     const parsed = claimPolicyUpdateSchema.safeParse(raw);
@@ -321,6 +332,15 @@ export async function updateClaimPolicyAction(
       },
     });
 
+    await logClaimAudit({
+      claimId,
+      actorId: gate.session.user.id,
+      action: "POLICY_RECORD_UPDATE",
+      entityType: "ClaimPolicy",
+      entityId: d.id,
+      summary: `Updated coverage record (${coercePolicyLine(d.line)})`,
+    });
+
     revalidateClaim(claimId);
     return { ok: true, data: undefined };
   } catch (e) {
@@ -334,9 +354,9 @@ export async function deleteClaimPolicyAction(
   policyId: string
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession();
-    if (!canEdit(session.user.role)) {
-      return { ok: false, error: "Insufficient privileges." };
+    const gate = await assertCanEditClaim(claimId);
+    if (gate.error || !gate.session) {
+      return { ok: false, error: gate.error ?? "Unauthorized." };
     }
 
     const existing = await prisma.claimPolicy.findFirst({
@@ -345,6 +365,16 @@ export async function deleteClaimPolicyAction(
     if (!existing) return { ok: false, error: "Policy record not found." };
 
     await prisma.claimPolicy.delete({ where: { id: policyId } });
+
+    await logClaimAudit({
+      claimId,
+      actorId: gate.session.user.id,
+      action: "POLICY_RECORD_DELETE",
+      entityType: "ClaimPolicy",
+      entityId: policyId,
+      summary: `Removed coverage record (${existing.line})`,
+    });
+
     revalidateClaim(claimId);
     return { ok: true, data: undefined };
   } catch (e) {
@@ -358,9 +388,9 @@ export async function createManualClaimPolicyAction(
   line: PolicyLine
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    const session = await requireSession();
-    if (!canEdit(session.user.role)) {
-      return { ok: false, error: "Insufficient privileges." };
+    const gate = await assertCanEditClaim(claimId);
+    if (gate.error || !gate.session) {
+      return { ok: false, error: gate.error ?? "Unauthorized." };
     }
 
     const {
@@ -381,6 +411,15 @@ export async function createManualClaimPolicyAction(
         label: line.replace(/_/g, " "),
         limits,
       },
+    });
+
+    await logClaimAudit({
+      claimId,
+      actorId: gate.session.user.id,
+      action: "POLICY_RECORD_CREATE",
+      entityType: "ClaimPolicy",
+      entityId: created.id,
+      summary: `Added blank ${line.replace(/_/g, " ")} coverage slot`,
     });
 
     revalidateClaim(claimId);

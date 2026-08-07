@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { docTypeEnum } from "@/lib/schemas/claim";
 import { coercePolicyLine } from "@/lib/policy-extraction";
 import { storeClaimDocument } from "@/lib/storage";
+import { logClaimAudit } from "@/lib/claims/audit";
 import { revalidatePath } from "next/cache";
 
 export const runtime = "nodejs";
@@ -114,7 +115,28 @@ export async function POST(req: NextRequest) {
         uploadedById: uploader.id,
         extractionStatus,
         policyLine,
+        isCertifiedPolicy: docTypeParsed.data === "POLICY",
       },
+    });
+
+    if (docTypeParsed.data === "POLICY") {
+      await prisma.document.updateMany({
+        where: {
+          claimId,
+          isCertifiedPolicy: true,
+          NOT: { id: doc.id },
+        },
+        data: { isCertifiedPolicy: false },
+      });
+    }
+
+    await logClaimAudit({
+      claimId,
+      actorId: uploader.id,
+      action: "DOCUMENT_UPLOAD",
+      entityType: "Document",
+      entityId: doc.id,
+      summary: `Uploaded “${file.name}” (${docTypeParsed.data})`,
     });
 
     revalidatePath(`/claims/${claimId}`);

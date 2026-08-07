@@ -109,6 +109,21 @@ export function ActivityTab({ claim, editable }: ClaimWorkspaceProps) {
             Chain of custody: unbroken
           </p>
           <ol className="space-y-0">
+            {claim.auditEvents.map((e) => (
+              <li
+                key={e.id}
+                className="relative border-l border-brand-white/10 pb-6 pl-4 last:pb-0"
+              >
+                <span className="absolute -left-[3px] top-1 h-1.5 w-1.5 bg-brand-gold" />
+                <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
+                  {format(new Date(e.createdAt), "yyyy-MM-dd HH:mm")} · Audit
+                </p>
+                <p className="mt-1 text-sm text-brand-white">{e.summary}</p>
+                <p className="text-xs text-brand-slate">
+                  {e.actorName} · {e.action}
+                </p>
+              </li>
+            ))}
             {claim.statusHistory.map((h) => (
               <li
                 key={h.id}
@@ -116,7 +131,7 @@ export function ActivityTab({ claim, editable }: ClaimWorkspaceProps) {
               >
                 <span className="absolute -left-[3px] top-1 h-1.5 w-1.5 bg-brand-gold" />
                 <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
-                  {format(new Date(h.changedAt), "yyyy-MM-dd HH:mm")}
+                  {format(new Date(h.changedAt), "yyyy-MM-dd HH:mm")} · Status
                 </p>
                 <p className="mt-1 text-sm text-brand-white">
                   {h.previousStatus
