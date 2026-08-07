@@ -81,6 +81,16 @@ export function DashboardClient({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkAdjuster, setBulkAdjuster] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  function toggleExpanded(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   const setParam = useCallback(
     (key: string, value: string | null) => {
@@ -381,15 +391,10 @@ export function DashboardClient({
         </div>
       ) : null}
 
-      {/* Table */}
-      <div
-        className={cn(
-          "border border-brand-white/10 overflow-x-auto",
-          (pending || busy) && "opacity-60"
-        )}
-      >
+      {/* Claims list — mobile cards + desktop table */}
+      <div className={cn((pending || busy) && "opacity-60")}>
         {claims.length === 0 ? (
-          <div className="px-6 py-16 text-center">
+          <div className="border border-brand-white/10 px-6 py-16 text-center">
             <p className="eyebrow mb-3">Secure Record</p>
             <p className="text-sm text-brand-slate">
               No active files. Begin intake to open the first record.
@@ -401,103 +406,244 @@ export function DashboardClient({
             ) : null}
           </div>
         ) : (
-          <table className="w-full min-w-[1100px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-brand-white/10 bg-brand-navy-deep/50">
-                {canEditClaims ? (
-                  <th className="w-10 px-3 py-2.5 text-left align-middle">
-                    <Checkbox
-                      checked={allSelected}
-                      onCheckedChange={(c) => toggleAll(!!c)}
-                      aria-label="Select all"
-                    />
-                  </th>
-                ) : null}
-                <SortHeader col="claimNumber" label="BL Claim #" />
-                <SortHeader col="insurerClaimNumber" label="NI Claim #" />
-                <SortHeader col="claimant" label="Claimant" />
-                <SortHeader col="status" label="Status" />
-                <SortHeader col="lossType" label="Loss" />
-                <SortHeader col="dateOfLoss" label="Date of Loss" />
-                <SortHeader col="adjuster" label="Adjuster" />
-                <SortHeader col="daysOpen" label="Days Open" />
-                <SortHeader
-                  col="estimatedValue"
-                  label="Est. Value"
-                  className="text-right"
-                />
-              </tr>
-            </thead>
-            <tbody>
-              {claims.map((c) => (
-                <tr
-                  key={c.id}
-                  className="border-b border-brand-white/10 last:border-0 hover:bg-brand-gold/5"
-                >
-                  {canEditClaims ? (
-                    <td className="w-10 px-3 py-2.5 align-middle">
-                      <Checkbox
-                        checked={selected.has(c.id)}
-                        onCheckedChange={(checked) => toggleOne(c.id, !!checked)}
-                        aria-label={`Select ${c.claimNumber}`}
-                      />
-                    </td>
-                  ) : null}
-                  <td className="px-3 py-2.5 align-middle">
-                    <Link
-                      href={`/claims/${c.id}`}
-                      className="font-mono text-xs tracking-wide text-brand-gold hover:underline"
+          <>
+            {/* Mobile / tablet: vertical collapsible cards */}
+            <div className="space-y-2 lg:hidden">
+              {canEditClaims ? (
+                <div className="flex items-center gap-3 border border-brand-white/10 px-3 py-2">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={(c) => toggleAll(!!c)}
+                    aria-label="Select all"
+                  />
+                  <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
+                    Select all files
+                  </p>
+                </div>
+              ) : null}
+              <ul className="space-y-2">
+                {claims.map((c) => {
+                  const open = expanded.has(c.id);
+                  return (
+                    <li
+                      key={c.id}
+                      className="border border-brand-white/10 bg-brand-navy-deep/30"
                     >
-                      {c.claimNumber}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-2.5 align-middle font-mono text-xs text-brand-white/80">
-                    {c.insurerClaimNumber ?? "—"}
-                  </td>
-                  <td className="px-3 py-2.5 align-middle text-brand-white/90">{c.primaryClaimant}</td>
-                  <td className="px-3 py-2.5 align-middle">
-                    <StatusBadge status={c.status} />
-                  </td>
-                  <td className="px-3 py-2.5 align-middle font-mono text-xs uppercase tracking-wider text-brand-slate">
-                    {LOSS_TYPE_LABELS[c.lossType]}
-                  </td>
-                  <td className="px-3 py-2.5 align-middle font-mono text-xs text-brand-slate">
-                    {format(new Date(c.dateOfLoss), "yyyy-MM-dd")}
-                  </td>
-                  <td className="px-3 py-2.5 align-middle">
+                      <div className="flex items-start gap-2 px-3 py-3">
+                        {canEditClaims ? (
+                          <Checkbox
+                            className="mt-1"
+                            checked={selected.has(c.id)}
+                            onCheckedChange={(checked) =>
+                              toggleOne(c.id, !!checked)
+                            }
+                            aria-label={`Select ${c.claimNumber}`}
+                          />
+                        ) : null}
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 text-left"
+                          onClick={() => toggleExpanded(c.id)}
+                          aria-expanded={open}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-mono text-xs tracking-wide text-brand-gold">
+                                {c.claimNumber}
+                              </p>
+                              <p className="mt-1 truncate text-sm text-brand-white">
+                                {c.primaryClaimant}
+                              </p>
+                              <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-brand-slate">
+                                {LOSS_TYPE_LABELS[c.lossType]} ·{" "}
+                                {format(new Date(c.dateOfLoss), "MMM d, yyyy")}
+                              </p>
+                            </div>
+                            <div className="flex shrink-0 flex-col items-end gap-2">
+                              <StatusBadge status={c.status} />
+                              <span className="font-sans text-[9px] font-bold uppercase tracking-[0.16em] text-brand-slate">
+                                {open ? "Collapse ▲" : "Expand ▼"}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+
+                      {open ? (
+                        <div className="space-y-3 border-t border-brand-white/10 px-3 py-3">
+                          <dl className="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <dt className="font-sans text-[9px] font-bold uppercase tracking-[0.16em] text-brand-slate">
+                                NI Claim #
+                              </dt>
+                              <dd className="mt-1 font-mono text-xs text-brand-white/90">
+                                {c.insurerClaimNumber ?? "—"}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="font-sans text-[9px] font-bold uppercase tracking-[0.16em] text-brand-slate">
+                                Days open
+                              </dt>
+                              <dd className="mt-1 font-mono text-xs text-brand-white/90">
+                                {daysOpen(c.createdAt)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="font-sans text-[9px] font-bold uppercase tracking-[0.16em] text-brand-slate">
+                                Est. value
+                              </dt>
+                              <dd className="mt-1 font-mono text-xs text-brand-white/90">
+                                {formatCurrency(c.estimatedValue)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="font-sans text-[9px] font-bold uppercase tracking-[0.16em] text-brand-slate">
+                                Adjuster
+                              </dt>
+                              <dd className="mt-1 text-xs text-brand-white/90">
+                                {c.adjusterName ?? "Unassigned"}
+                              </dd>
+                            </div>
+                          </dl>
+
+                          {canEditClaims ? (
+                            <div className="space-y-1.5">
+                              <Label>Reassign</Label>
+                              <Select
+                                value={c.assignedAdjusterId ?? "none"}
+                                onValueChange={(v) => handleRowAssign(c.id, v)}
+                              >
+                                <SelectTrigger className="h-9 w-full border-brand-white/10 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Unassigned</SelectItem>
+                                  {adjusters.map((a) => (
+                                    <SelectItem key={a.id} value={a.id}>
+                                      {a.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : null}
+
+                          <Button asChild size="sm" variant="solid" className="w-full">
+                            <Link href={`/claims/${c.id}`}>Open file</Link>
+                          </Button>
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden overflow-x-auto border border-brand-white/10 lg:block">
+              <table className="w-full min-w-[1100px] border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-brand-white/10 bg-brand-navy-deep/50">
                     {canEditClaims ? (
-                      <Select
-                        value={c.assignedAdjusterId ?? "none"}
-                        onValueChange={(v) => handleRowAssign(c.id, v)}
-                      >
-                        <SelectTrigger className="h-7 w-full min-w-0 border-brand-white/10 text-xs sm:min-w-[120px] sm:w-auto">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Unassigned</SelectItem>
-                          {adjusters.map((a) => (
-                            <SelectItem key={a.id} value={a.id}>
-                              {a.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <span className="text-brand-white/80">
-                        {c.adjusterName ?? "—"}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2.5 align-middle font-mono text-xs">
-                    {daysOpen(c.createdAt)}
-                  </td>
-                  <td className="px-3 py-2.5 align-middle text-right font-mono text-xs">
-                    {formatCurrency(c.estimatedValue)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      <th className="w-10 px-3 py-2.5 text-left align-middle">
+                        <Checkbox
+                          checked={allSelected}
+                          onCheckedChange={(c) => toggleAll(!!c)}
+                          aria-label="Select all"
+                        />
+                      </th>
+                    ) : null}
+                    <SortHeader col="claimNumber" label="BL Claim #" />
+                    <SortHeader col="insurerClaimNumber" label="NI Claim #" />
+                    <SortHeader col="claimant" label="Claimant" />
+                    <SortHeader col="status" label="Status" />
+                    <SortHeader col="lossType" label="Loss" />
+                    <SortHeader col="dateOfLoss" label="Date of Loss" />
+                    <SortHeader col="adjuster" label="Adjuster" />
+                    <SortHeader col="daysOpen" label="Days Open" />
+                    <SortHeader
+                      col="estimatedValue"
+                      label="Est. Value"
+                      className="text-right"
+                    />
+                  </tr>
+                </thead>
+                <tbody>
+                  {claims.map((c) => (
+                    <tr
+                      key={c.id}
+                      className="border-b border-brand-white/10 last:border-0 hover:bg-brand-gold/5"
+                    >
+                      {canEditClaims ? (
+                        <td className="w-10 px-3 py-2.5 align-middle">
+                          <Checkbox
+                            checked={selected.has(c.id)}
+                            onCheckedChange={(checked) =>
+                              toggleOne(c.id, !!checked)
+                            }
+                            aria-label={`Select ${c.claimNumber}`}
+                          />
+                        </td>
+                      ) : null}
+                      <td className="px-3 py-2.5 align-middle">
+                        <Link
+                          href={`/claims/${c.id}`}
+                          className="font-mono text-xs tracking-wide text-brand-gold hover:underline"
+                        >
+                          {c.claimNumber}
+                        </Link>
+                      </td>
+                      <td className="px-3 py-2.5 align-middle font-mono text-xs text-brand-white/80">
+                        {c.insurerClaimNumber ?? "—"}
+                      </td>
+                      <td className="px-3 py-2.5 align-middle text-brand-white/90">
+                        {c.primaryClaimant}
+                      </td>
+                      <td className="px-3 py-2.5 align-middle">
+                        <StatusBadge status={c.status} />
+                      </td>
+                      <td className="px-3 py-2.5 align-middle font-mono text-xs uppercase tracking-wider text-brand-slate">
+                        {LOSS_TYPE_LABELS[c.lossType]}
+                      </td>
+                      <td className="px-3 py-2.5 align-middle font-mono text-xs text-brand-slate">
+                        {format(new Date(c.dateOfLoss), "yyyy-MM-dd")}
+                      </td>
+                      <td className="px-3 py-2.5 align-middle">
+                        {canEditClaims ? (
+                          <Select
+                            value={c.assignedAdjusterId ?? "none"}
+                            onValueChange={(v) => handleRowAssign(c.id, v)}
+                          >
+                            <SelectTrigger className="h-7 w-full min-w-0 border-brand-white/10 text-xs sm:min-w-[120px] sm:w-auto">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Unassigned</SelectItem>
+                              {adjusters.map((a) => (
+                                <SelectItem key={a.id} value={a.id}>
+                                  {a.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span className="text-brand-white/80">
+                            {c.adjusterName ?? "—"}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 align-middle font-mono text-xs">
+                        {daysOpen(c.createdAt)}
+                      </td>
+                      <td className="px-3 py-2.5 align-middle text-right font-mono text-xs">
+                        {formatCurrency(c.estimatedValue)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>
