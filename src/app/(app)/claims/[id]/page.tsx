@@ -36,7 +36,10 @@ async function ClaimDetailDataLoader({
       },
       documents: {
         orderBy: { uploadedAt: "desc" },
-        include: { uploadedBy: { select: { name: true } } },
+        include: {
+          uploadedBy: { select: { name: true } },
+          vaultEntry: { select: { displayPath: true } },
+        },
       },
       payments: {
         orderBy: { date: "desc" },
@@ -181,6 +184,7 @@ async function ClaimDetailDataLoader({
       extractionStatus: d.extractionStatus,
       policyLine: d.policyLine,
       isCertifiedPolicy: d.isCertifiedPolicy,
+      displayPath: d.vaultEntry?.displayPath ?? null,
     })),
     auditEvents: claim.auditEvents.map((e) => ({
       id: e.id,

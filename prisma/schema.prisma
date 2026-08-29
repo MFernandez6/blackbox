@@ -151,6 +151,7 @@ model Adjuster {
   emailsLogged   ClaimEmail[]    @relation("EmailLoggedBy")
   contactsAdded  ClaimContact[]  @relation("ContactCreator")
   auditEvents    ClaimAuditEvent[] @relation("AuditActor")
+  vaultUploads   DocumentVaultEntry[] @relation("VaultUploader")
 }
 
 // ---------------------------------------------------------------------------
@@ -244,6 +245,7 @@ model Claim {
   emails           ClaimEmail[]
   policies         ClaimPolicy[]
   auditEvents      ClaimAuditEvent[]
+  documentVaultEntries DocumentVaultEntry[]
 
   @@index([status])
   @@index([assignedAdjusterId])
@@ -305,12 +307,36 @@ model Document {
   claim      Claim         @relation(fields: [claimId], references: [id], onDelete: Restrict)
   uploadedBy Adjuster      @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
   claimPolicies ClaimPolicy[]
+  vaultEntry DocumentVaultEntry?
 
   @@index([claimId])
   @@index([docType])
   @@index([uploadedById])
   @@index([policyLine])
   @@index([isCertifiedPolicy])
+}
+
+// ---------------------------------------------------------------------------
+// DocumentVaultEntry — BLACKMIRROR field photos filed into this vault.
+// Table is created by BLACKMIRROR migrations on the shared database.
+// Do not add a BLACKBOX migration for this model; `prisma generate` only.
+// ---------------------------------------------------------------------------
+
+model DocumentVaultEntry {
+  id           String   @id @default(cuid())
+  claimId      String
+  photoId      String?  @unique
+  documentId   String?  @unique
+  displayPath  String
+  uploadedById String
+  uploadedAt   DateTime @default(now())
+
+  claim      Claim     @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  uploadedBy Adjuster  @relation("VaultUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@index([claimId])
+  @@index([uploadedById])
 }
 
 // ---------------------------------------------------------------------------

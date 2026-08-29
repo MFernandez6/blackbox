@@ -110,6 +110,7 @@ export type ClaimDetailData = {
     extractionStatus: string;
     policyLine: PolicyLine | null;
     isCertifiedPolicy: boolean;
+    displayPath: string | null;
   }>;
   auditEvents: Array<{
     id: string;

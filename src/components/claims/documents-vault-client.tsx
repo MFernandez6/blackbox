@@ -7,6 +7,10 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import type { DocType, AdjusterRole, PolicyLine } from "@prisma/client";
 import { DOC_TYPE_LABELS, POLICY_LINE_LABELS } from "@/lib/claims/labels";
+import {
+  groupInspectionDocs,
+  isInspectionVaultDoc,
+} from "@/lib/claims/inspection-vault";
 import { canEdit } from "@/lib/auth-client";
 import { parsePolicyDocumentAction } from "@/lib/actions/claim-policies";
 import {
@@ -49,6 +53,7 @@ type Doc = {
   extractionStatus?: string;
   policyLine?: PolicyLine | null;
   isCertifiedPolicy?: boolean;
+  displayPath?: string | null;
 };
 
 type Props = {
@@ -140,18 +145,31 @@ export function DocumentsVaultClient({
     const byType = {} as Record<DocType, number>;
     for (const t of ALL_DOC_TYPES) byType[t] = 0;
     for (const d of documents) byType[d.docType]++;
-    return { all: documents.length, byType };
-  }, [documents]);
+    return {
+      all: documents.length,
+      inspection: documents.filter((d) => isInspectionVaultDoc(d, claimNumber))
+        .length,
+      byType,
+    };
+  }, [claimNumber, documents]);
 
-  const filtered = useMemo(() => {
+  const { inspectionDocs, officeDocs } = useMemo(() => {
     let list =
-      filter === "all"
-        ? documents
-        : documents.filter((d) => d.docType === filter);
+      filter === "inspection"
+        ? documents.filter((d) => isInspectionVaultDoc(d, claimNumber))
+        : filter === "all"
+          ? documents
+          : documents.filter((d) => d.docType === filter);
     const q = search.trim().toLowerCase();
-    if (q) list = list.filter((d) => d.fileName.toLowerCase().includes(q));
+    if (q) {
+      list = list.filter(
+        (d) =>
+          d.fileName.toLowerCase().includes(q) ||
+          (d.displayPath ?? "").toLowerCase().includes(q)
+      );
+    }
 
-    return [...list].sort((a, b) => {
+    const sorted = [...list].sort((a, b) => {
       switch (sort) {
         case "name":
           return a.fileName.localeCompare(b.fileName);
@@ -164,7 +182,21 @@ export function DocumentsVaultClient({
           );
       }
     });
-  }, [documents, filter, search, sort]);
+
+    const inspection = sorted.filter((d) =>
+      isInspectionVaultDoc(d, claimNumber)
+    );
+    const office =
+      filter === "inspection"
+        ? []
+        : sorted.filter((d) => !isInspectionVaultDoc(d, claimNumber));
+    return { inspectionDocs: inspection, officeDocs: office };
+  }, [claimNumber, documents, filter, search, sort]);
+
+  const inspectionGroups = useMemo(
+    () => groupInspectionDocs(inspectionDocs, claimNumber),
+    [claimNumber, inspectionDocs]
+  );
 
   function openParse(doc: Doc) {
     setParseError("");
@@ -379,6 +411,21 @@ export function DocumentsVaultClient({
           >
             All <span className="opacity-80">({counts.all})</span>
           </button>
+          {counts.inspection > 0 ? (
+            <button
+              type="button"
+              onClick={() => setFilter("inspection")}
+              className={cn(
+                "border px-2 py-1 font-sans text-[10px] font-bold uppercase tracking-[0.2em]",
+                filter === "inspection"
+                  ? "border-brand-gold bg-brand-gold text-brand-navy"
+                  : "border-brand-white/10 text-brand-slate hover:border-brand-gold/40"
+              )}
+            >
+              Inspection{" "}
+              <span className="opacity-80">({counts.inspection})</span>
+            </button>
+          ) : null}
           {ALL_DOC_TYPES.map((t) => {
             const count = counts.byType[t];
             if (count === 0) return null;
@@ -431,13 +478,88 @@ export function DocumentsVaultClient({
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {inspectionDocs.length === 0 && officeDocs.length === 0 ? (
         <div className="border border-brand-white/10 px-6 py-16 text-center">
           <p className="eyebrow mb-2">Secure Record</p>
           <p className="text-sm text-brand-slate">No documents on file</p>
         </div>
       ) : (
-        <div className="border border-brand-white/10 overflow-x-auto">
+        <div className="space-y-6">
+          {inspectionDocs.length > 0 ? (
+            <section className="border border-brand-gold/25 bg-brand-gold/[0.03]">
+              <div className="border-b border-brand-gold/20 px-4 py-3">
+                <p className="eyebrow">BLACKMIRROR</p>
+                <h2 className="mt-1 font-serif text-lg text-brand-white">
+                  Field Inspection
+                </h2>
+                <p className="mt-1 text-xs text-brand-slate">
+                  Photos captured on site. Separate from office uploads in this
+                  vault.
+                </p>
+              </div>
+              <div className="space-y-6 px-4 py-4">
+                {inspectionGroups.map((session) => (
+                  <div key={session.key} className="space-y-4">
+                    <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-brand-gold">
+                      {session.label}
+                    </p>
+                    {session.locations.map((location) => (
+                      <div key={location.key} className="space-y-2">
+                        <p className="font-sans text-[10px] font-bold uppercase tracking-[0.16em] text-brand-slate">
+                          {location.label}
+                        </p>
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                          {location.docs.map((d) => (
+                            <button
+                              key={d.id}
+                              type="button"
+                              onClick={() => setPreviewDoc(d)}
+                              className="border border-brand-white/10 bg-brand-navy-deep/40 text-left hover:border-brand-gold/40"
+                            >
+                              <div className="aspect-[4/3] overflow-hidden bg-black/40">
+                                {isImage(d.mimeType) ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={d.fileUrl}
+                                    alt={d.fileName}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="flex h-full items-center justify-center font-mono text-[10px] uppercase tracking-[0.16em] text-brand-slate">
+                                    {mimeBadge(d.mimeType)}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="space-y-1 px-2 py-2">
+                                <p className="truncate text-xs text-brand-white">
+                                  {d.fileName}
+                                </p>
+                                <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-brand-slate">
+                                  {format(new Date(d.uploadedAt), "yyyy-MM-dd")}
+                                </p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {officeDocs.length > 0 ? (
+            <div>
+              {inspectionDocs.length > 0 ? (
+                <div className="mb-3">
+                  <p className="eyebrow">File records</p>
+                  <p className="mt-1 text-xs text-brand-slate">
+                    Policy, estimates, correspondence, and other office uploads.
+                  </p>
+                </div>
+              ) : null}
+              <div className="border border-brand-white/10 overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-brand-white/10 bg-brand-navy-deep/50">
               <tr>
@@ -464,7 +586,7 @@ export function DocumentsVaultClient({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((d) => (
+              {officeDocs.map((d) => (
                 <tr
                   key={d.id}
                   role="button"
@@ -539,6 +661,9 @@ export function DocumentsVaultClient({
               ))}
             </tbody>
           </table>
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -556,6 +681,14 @@ export function DocumentsVaultClient({
               </DialogHeader>
               <div className="space-y-4">
                 <dl className="grid gap-2 text-sm sm:grid-cols-2">
+                  {previewDoc.displayPath ? (
+                    <div className="sm:col-span-2">
+                      <dt className="eyebrow">Inspection path</dt>
+                      <dd className="font-mono text-xs text-brand-white">
+                        {previewDoc.displayPath}
+                      </dd>
+                    </div>
+                  ) : null}
                   <div>
                     <dt className="eyebrow">Type</dt>
                     <dd className="font-mono text-xs text-brand-white">
