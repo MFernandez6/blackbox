@@ -7,7 +7,7 @@ import {
   STATUS_LABELS,
   PAYMENT_TYPE_LABELS,
 } from "@/lib/claims/labels";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, projectedContingencyFee } from "@/lib/utils";
 import { StatusBadge } from "@/components/claims/status-badge";
 import { ClaimPrintActions } from "@/components/claims/claim-print-actions";
 
@@ -47,11 +47,17 @@ export default async function ClaimPrintPage({
     (sum, p) => sum + Number(p.amount),
     0
   );
-  const feePct = Number(claim.contingencyFeePercent);
+  const fee = projectedContingencyFee({
+    percent: claim.contingencyFeePercent.toString(),
+    settlementAmount: claim.settlementAmount?.toString() ?? null,
+    demandAmount: claim.demandAmount?.toString() ?? null,
+    estimatedValue: claim.estimatedValue?.toString() ?? null,
+  });
+  const feePct = fee.percent ?? Number(claim.contingencyFeePercent);
   const feeBase = Number(
     claim.settlementAmount ?? claim.demandAmount ?? claim.estimatedValue ?? 0
   );
-  const projectedFee = feeBase * (feePct / 100);
+  const projectedFee = fee.dollars ?? feeBase * (feePct / 100);
   const outstanding = Number(claim.settlementAmount ?? 0) - paymentTotal;
 
   return (
@@ -105,7 +111,11 @@ export default async function ClaimPrintPage({
           />
           <PrintField
             label="Contingency Fee"
-            value={`${claim.contingencyFeePercent}%`}
+            value={
+              fee.dollars !== null
+                ? `${claim.contingencyFeePercent}% · ${formatCurrency(fee.dollars)}`
+                : `${claim.contingencyFeePercent}%`
+            }
             mono
           />
           {claim.isCatClaim ? (

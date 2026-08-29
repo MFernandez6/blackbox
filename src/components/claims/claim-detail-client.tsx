@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import type { ClaimStatus, AdjusterRole } from "@prisma/client";
 import { STATUS_LABELS, LOSS_TYPE_LABELS } from "@/lib/claims/labels";
 import { canEdit } from "@/lib/auth-client";
+import { formatCurrency, formatFeePercent, projectedContingencyFee } from "@/lib/utils";
 import {
   changeClaimStatusAction,
   archiveClaimAction,
@@ -105,6 +106,21 @@ export function ClaimDetailClient({
   const insuredName = primary
     ? `${primary.firstName} ${primary.lastName}`.trim()
     : "—";
+
+  const fee = projectedContingencyFee({
+    percent: claim.contingencyFeePercent,
+    settlementAmount: claim.settlementAmount,
+    demandAmount: claim.demandAmount,
+    estimatedValue: claim.estimatedValue,
+  });
+  const feeHint =
+    fee.basis === "settlement"
+      ? "on settlement"
+      : fee.basis === "demand"
+        ? "on demand"
+        : fee.basis === "estimate"
+          ? "on estimate"
+          : "Add settlement, demand, or estimate to see dollars";
 
   const workspace = { claim, adjusters, role, editable };
 
@@ -216,7 +232,12 @@ export function ClaimDetailClient({
               />
               <HeroMeta
                 label="Fee"
-                value={`${claim.contingencyFeePercent}%`}
+                value={
+                  fee.dollars !== null
+                    ? `${formatFeePercent(claim.contingencyFeePercent)} · ${formatCurrency(fee.dollars)}`
+                    : formatFeePercent(claim.contingencyFeePercent)
+                }
+                hint={feeHint}
               />
             </dl>
           </div>
@@ -343,9 +364,11 @@ export function ClaimDetailClient({
 function HeroMeta({
   label,
   value,
+  hint,
 }: {
   label: string;
   value: string;
+  hint?: string;
 }) {
   return (
     <div>
@@ -353,6 +376,11 @@ function HeroMeta({
         {label}
       </dt>
       <dd className="mt-1 font-serif text-base text-brand-white">{value}</dd>
+      {hint ? (
+        <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-brand-slate">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }
