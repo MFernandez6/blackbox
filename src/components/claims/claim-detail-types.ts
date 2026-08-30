@@ -111,6 +111,7 @@ export type ClaimDetailData = {
     policyLine: PolicyLine | null;
     isCertifiedPolicy: boolean;
     displayPath: string | null;
+    source?: "BLACKLETTER" | null;
   }>;
   auditEvents: Array<{
     id: string;

@@ -185,6 +185,13 @@ async function ClaimDetailDataLoader({
       policyLine: d.policyLine,
       isCertifiedPolicy: d.isCertifiedPolicy,
       displayPath: d.vaultEntry?.displayPath ?? null,
+      source:
+        d.extractedData &&
+        typeof d.extractedData === "object" &&
+        !Array.isArray(d.extractedData) &&
+        (d.extractedData as { source?: string }).source === "BLACKLETTER"
+          ? "BLACKLETTER"
+          : null,
     })),
     auditEvents: claim.auditEvents.map((e) => ({
       id: e.id,

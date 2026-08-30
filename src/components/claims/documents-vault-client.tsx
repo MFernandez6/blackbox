@@ -54,6 +54,7 @@ type Doc = {
   policyLine?: PolicyLine | null;
   isCertifiedPolicy?: boolean;
   displayPath?: string | null;
+  source?: "BLACKLETTER" | null;
 };
 
 type Props = {
@@ -83,6 +84,14 @@ function isImage(mimeType: string) {
 
 function isPdf(mimeType: string) {
   return mimeType === "application/pdf";
+}
+
+function isHtml(mimeType: string) {
+  return mimeType.startsWith("text/html");
+}
+
+function isGoogleDoc(fileUrl: string) {
+  return /docs\.google\.com/i.test(fileUrl);
 }
 
 function canParseAsPolicy(doc: Doc) {
@@ -610,6 +619,11 @@ export function DocumentsVaultClient({
                       <span className="truncate text-brand-white">
                         {d.fileName}
                       </span>
+                      {d.source === "BLACKLETTER" ? (
+                        <Badge className="border-brand-gold/50 text-brand-gold">
+                          BLACKLETTER
+                        </Badge>
+                      ) : null}
                       {d.isCertifiedPolicy ? (
                         <Badge className="border-brand-gold text-brand-gold">
                           Certified
@@ -705,6 +719,16 @@ export function DocumentsVaultClient({
                       · {previewDoc.uploaderName}
                     </dd>
                   </div>
+                  {previewDoc.source === "BLACKLETTER" ? (
+                    <div>
+                      <dt className="eyebrow">Source</dt>
+                      <dd>
+                        <Badge className="border-brand-gold/50 text-brand-gold">
+                          BLACKLETTER
+                        </Badge>
+                      </dd>
+                    </div>
+                  ) : null}
                   {previewDoc.isCertifiedPolicy ? (
                     <div>
                       <dt className="eyebrow">Status</dt>
@@ -761,6 +785,12 @@ export function DocumentsVaultClient({
                     title={previewDoc.fileName}
                     className="h-[60vh] w-full border border-brand-white/10 bg-white"
                   />
+                ) : isHtml(previewDoc.mimeType) && !isGoogleDoc(previewDoc.fileUrl) ? (
+                  <iframe
+                    src={previewDoc.fileUrl}
+                    title={previewDoc.fileName}
+                    className="h-[60vh] w-full border border-brand-white/10 bg-white"
+                  />
                 ) : (
                   <div className="space-y-3 border border-brand-white/10 p-4">
                     <p className="text-sm text-brand-slate">
@@ -777,9 +807,17 @@ export function DocumentsVaultClient({
                     <Button asChild size="sm" variant="outline">
                       <a
                         href={previewDoc.fileUrl}
-                        download={previewDoc.fileName}
+                        target="_blank"
+                        rel="noreferrer"
+                        download={
+                          isGoogleDoc(previewDoc.fileUrl)
+                            ? undefined
+                            : previewDoc.fileName
+                        }
                       >
-                        Download file
+                        {isGoogleDoc(previewDoc.fileUrl)
+                          ? "Open Google Doc"
+                          : "Download file"}
                       </a>
                     </Button>
                   </div>
