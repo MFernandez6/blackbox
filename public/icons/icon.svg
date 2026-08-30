@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#05070B"/>
+  <rect x="32" y="32" width="448" height="448" fill="none" stroke="#C6A85B" stroke-width="8"/>
+
+  <rect x="148" y="108" width="216" height="192" fill="none" stroke="#C6A85B" stroke-width="8"/>
+  <rect x="176" y="136" width="160" height="136" fill="none" stroke="#C6A85B" stroke-width="6"/>
+  <rect x="242" y="188" width="28" height="28" fill="none" stroke="#C6A85B" stroke-width="5"/>
+  <text x="256" y="414" text-anchor="middle" font-family="Georgia, Times New Roman, serif" font-size="70" font-weight="700" fill="#C6A85B" letter-spacing="12">BX</text>
+</svg>
