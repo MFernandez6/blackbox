@@ -81,6 +81,9 @@ export type ClaimDetailData = {
   estimateSentDate: string | null;
   isArchived: boolean;
   createdAt: string;
+  sourceProduct: string | null;
+  sourceIntakeId: string | null;
+  sourceIntakeNumber: string | null;
   claimants: Array<{
     id: string;
     firstName: string;
@@ -111,7 +114,7 @@ export type ClaimDetailData = {
     policyLine: PolicyLine | null;
     isCertifiedPolicy: boolean;
     displayPath: string | null;
-    source?: "BLACKLETTER" | null;
+    source?: "BLACKLETTER" | "BLACKGATE" | null;
   }>;
   auditEvents: Array<{
     id: string;

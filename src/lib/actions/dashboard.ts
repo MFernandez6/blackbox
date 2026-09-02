@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSession, canEdit } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { ActionResult } from "@/lib/actions/claims";
+import { deleteClaimAction, type ActionResult } from "@/lib/actions/claims";
 
 async function assertCanEditClaim(claimId: string) {
   const session = await requireSession();
@@ -66,6 +66,33 @@ export async function bulkArchiveClaimsAction(
   } catch (e) {
     console.error(e);
     return { ok: false, error: "Bulk archive failed." };
+  }
+}
+
+export async function bulkDeleteClaimsAction(
+  ids: string[]
+): Promise<ActionResult<{ count: number }>> {
+  try {
+    if (!ids.length) {
+      return { ok: false, error: "No files selected." };
+    }
+
+    const session = await requireSession();
+    if (session.user.role !== "ADMIN") {
+      return { ok: false, error: "Only an admin can permanently delete files." };
+    }
+
+    let count = 0;
+    for (const id of ids) {
+      const result = await deleteClaimAction(id);
+      if (result.ok) count++;
+    }
+
+    revalidatePath("/dashboard");
+    return { ok: true, data: { count } };
+  } catch (e) {
+    console.error(e);
+    return { ok: false, error: "Bulk delete failed." };
   }
 }
 

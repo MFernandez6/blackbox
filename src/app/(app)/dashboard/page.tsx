@@ -60,6 +60,7 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
       { propertyAddress: { contains: q, mode: "insensitive" } },
       { county: { contains: q, mode: "insensitive" } },
       { zipCode: { contains: q, mode: "insensitive" } },
+      { sourceIntakeNumber: { contains: q, mode: "insensitive" } },
       {
         claimants: {
           some: {
@@ -101,8 +102,6 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const weekOut = new Date(today);
-  weekOut.setDate(weekOut.getDate() + 7);
 
   const taskWhere: Prisma.ClaimTaskWhereInput = {
     status: { in: ["OPEN", "IN_PROGRESS"] },
@@ -121,9 +120,10 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
     statusGroups,
     openAgg,
     myTasks,
-    openClaimsForDates,
-    unassignedClaims,
+    assignedClaims,
+    openClaimsForWork,
     recentNotes,
+    recentClaims,
   ] = await Promise.all([
     prisma.claim.findMany({
       where,
@@ -158,43 +158,29 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
       include: { claim: { select: { id: true, claimNumber: true } } },
     }),
     prisma.claim.findMany({
+      where: { ...scopeWhere, assignedAdjusterId: session.user.id },
+      orderBy: { updatedAt: "desc" },
+      take: 8,
+      include: { claimants: { where: { isPrimaryContact: true }, take: 1 } },
+    }),
+    prisma.claim.findMany({
       where: {
         ...scopeWhere,
         status: { in: OPEN_STATUSES },
-        OR: [
-          { scheduledAppointmentDate: { lt: today } },
-          { initialContactDate: null },
-          { estimateSentDate: null, estimateCreatedDate: { lt: today } },
-        ],
       },
+      orderBy: { updatedAt: "desc" },
+      take: 40,
       select: {
         id: true,
         claimNumber: true,
         status: true,
+        assignedAdjusterId: true,
         scheduledAppointmentDate: true,
         initialContactDate: true,
         estimateCreatedDate: true,
         estimateSentDate: true,
       },
-      take: 20,
     }),
-    session.user.role === "ADMIN"
-      ? prisma.claim.findMany({
-          where: {
-            isArchived: false,
-            assignedAdjusterId: null,
-            status: { in: OPEN_STATUSES },
-          },
-          select: {
-            id: true,
-            claimNumber: true,
-            status: true,
-            propertyAddress: true,
-          },
-          orderBy: { updatedAt: "desc" },
-          take: 8,
-        })
-      : Promise.resolve([]),
     prisma.claimNote.findMany({
       where: { claim: scopeWhere },
       orderBy: { createdAt: "desc" },
@@ -204,43 +190,85 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
         createdBy: { select: { name: true } },
       },
     }),
+    prisma.claim.findMany({
+      where: scopeWhere,
+      orderBy: { updatedAt: "desc" },
+      take: 8,
+      include: { claimants: { where: { isPrimaryContact: true }, take: 1 } },
+    }),
   ]);
 
-  const overdueDates = openClaimsForDates.flatMap((c) => {
-    const rows: Array<{
-      claimId: string;
-      claimNumber: string;
-      label: string;
-      date: string;
-      status: ClaimStatus;
-    }> = [];
-    if (
-      c.scheduledAppointmentDate &&
-      c.scheduledAppointmentDate < today
-    ) {
-      rows.push({
-        claimId: c.id,
-        claimNumber: c.claimNumber,
-        label: "Scheduled appointment overdue",
-        date: c.scheduledAppointmentDate.toISOString(),
-        status: c.status,
-      });
-    }
-    if (
-      c.estimateCreatedDate &&
-      !c.estimateSentDate &&
-      c.estimateCreatedDate < today
-    ) {
-      rows.push({
-        claimId: c.id,
-        claimNumber: c.claimNumber,
-        label: "Estimate created — not sent",
-        date: c.estimateCreatedDate.toISOString(),
-        status: c.status,
-      });
-    }
-    return rows;
-  }).slice(0, 8);
+  const overdueDates = openClaimsForWork
+    .flatMap((c) => {
+      const rows: Array<{
+        claimId: string;
+        claimNumber: string;
+        label: string;
+        date: string | null;
+        status: ClaimStatus;
+      }> = [];
+      if (!c.assignedAdjusterId) {
+        rows.push({
+          claimId: c.id,
+          claimNumber: c.claimNumber,
+          label: "Unassigned file",
+          date: null,
+          status: c.status,
+        });
+      }
+      if (c.status === "INTAKE") {
+        rows.push({
+          claimId: c.id,
+          claimNumber: c.claimNumber,
+          label: "New intake — needs review",
+          date: null,
+          status: c.status,
+        });
+      }
+      if (!c.initialContactDate) {
+        rows.push({
+          claimId: c.id,
+          claimNumber: c.claimNumber,
+          label: "Initial contact not logged",
+          date: null,
+          status: c.status,
+        });
+      }
+      if (c.scheduledAppointmentDate && c.scheduledAppointmentDate < today) {
+        rows.push({
+          claimId: c.id,
+          claimNumber: c.claimNumber,
+          label: "Scheduled appointment overdue",
+          date: c.scheduledAppointmentDate.toISOString(),
+          status: c.status,
+        });
+      }
+      if (
+        c.estimateCreatedDate &&
+        !c.estimateSentDate &&
+        c.estimateCreatedDate < today
+      ) {
+        rows.push({
+          claimId: c.id,
+          claimNumber: c.claimNumber,
+          label: "Estimate created — not sent",
+          date: c.estimateCreatedDate.toISOString(),
+          status: c.status,
+        });
+      }
+      return rows;
+    })
+    .slice(0, 8);
+
+  function fileTitle(claim: {
+    propertyAddress?: string;
+    claimants: Array<{ firstName: string; lastName: string }>;
+  }) {
+    const primary = claim.claimants[0];
+    return primary
+      ? `${primary.firstName} ${primary.lastName}`
+      : claim.propertyAddress ?? "Open file";
+  }
 
   const rows: DashboardClaimRow[] = claims.map((c) => {
     const primary = c.claimants[0];
@@ -282,9 +310,28 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      <DashboardClient
+        claims={rows}
+        summary={{
+          openCount: openAgg._count._all,
+          byStatus,
+          pipelineValue: Number(openAgg._sum.estimatedValue ?? 0),
+        }}
+        adjusters={adjusters}
+        canEditClaims={canEdit(session.user.role)}
+        canManage={session.user.role === "ADMIN"}
+        role={session.user.role}
+        currentUserId={session.user.id}
+      />
       <DashboardMyWork
-        showUnassigned={session.user.role === "ADMIN"}
+        assigned={assignedClaims.map((c) => ({
+          id: c.id,
+          claimNumber: c.claimNumber,
+          status: c.status,
+          title: fileTitle(c),
+          hint: `Updated ${c.updatedAt.toISOString().slice(0, 10)}`,
+        }))}
         tasks={myTasks.map((t) => ({
           id: t.id,
           title: t.title,
@@ -294,12 +341,6 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
           claimNumber: t.claim.claimNumber,
         }))}
         overdueDates={overdueDates}
-        unassigned={unassignedClaims.map((c) => ({
-          id: c.id,
-          claimNumber: c.claimNumber,
-          status: c.status,
-          propertyAddress: c.propertyAddress,
-        }))}
         notes={recentNotes.map((n) => ({
           id: n.id,
           body: n.body,
@@ -308,20 +349,13 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
           claimNumber: n.claim.claimNumber,
           authorName: n.createdBy.name,
         }))}
-      />
-      <DashboardClient
-        claims={rows}
-        summary={{
-          openCount: openAgg._count._all,
-          byStatus,
-          pipelineValue: Number(openAgg._sum.estimatedValue ?? 0),
-        }}
-        adjusters={adjusters}
-        canCreate={canEdit(session.user.role)}
-        canEditClaims={canEdit(session.user.role)}
-        canManage={session.user.role === "ADMIN"}
-        role={session.user.role}
-        currentUserId={session.user.id}
+        recent={recentClaims.map((c) => ({
+          id: c.id,
+          claimNumber: c.claimNumber,
+          status: c.status,
+          title: fileTitle(c),
+          hint: `Updated ${c.updatedAt.toISOString().slice(0, 10)}`,
+        }))}
       />
     </div>
   );

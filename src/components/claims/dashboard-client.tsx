@@ -25,9 +25,11 @@ import {
 } from "@/lib/claims/labels";
 import {
   bulkArchiveClaimsAction,
+  bulkDeleteClaimsAction,
   assignClaimAdjusterAction,
   bulkAssignClaimsAction,
 } from "@/lib/actions/dashboard";
+import { deleteClaimAction } from "@/lib/actions/claims";
 import { cn, daysOpen, formatCurrency } from "@/lib/utils";
 
 export type DashboardClaimRow = {
@@ -57,7 +59,6 @@ type Props = {
   claims: DashboardClaimRow[];
   summary: DashboardSummary;
   adjusters: AdjusterOption[];
-  canCreate: boolean;
   canEditClaims: boolean;
   canManage: boolean;
   role: AdjusterRole;
@@ -71,8 +72,8 @@ export function DashboardClient({
   claims,
   summary,
   adjusters,
-  canCreate,
   canEditClaims,
+  canManage,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -154,6 +155,51 @@ export function DashboardClient({
     router.refresh();
   }
 
+  async function handleBulkDelete() {
+    if (!someSelected) return;
+    if (
+      !confirm(
+        `Permanently delete ${selected.size} selected file${selected.size === 1 ? "" : "s"}? This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    const result = await bulkDeleteClaimsAction(Array.from(selected));
+    setBusy(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(`${result.data.count} file${result.data.count === 1 ? "" : "s"} deleted`);
+    setSelected(new Set());
+    router.refresh();
+  }
+
+  async function handleRowDelete(claimId: string, claimNumber: string) {
+    if (
+      !confirm(
+        `Permanently delete ${claimNumber}? Related records will be removed. This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    const result = await deleteClaimAction(claimId);
+    setBusy(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(`${claimNumber} deleted`);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(claimId);
+      return next;
+    });
+    router.refresh();
+  }
+
   async function handleBulkAssign() {
     if (!someSelected || !bulkAdjuster) return;
     setBusy(true);
@@ -224,11 +270,6 @@ export function DashboardClient({
             Active Files
           </h1>
         </div>
-        {canCreate ? (
-          <Button asChild variant="solid">
-            <Link href="/claims/new">+ New Claim</Link>
-          </Button>
-        ) : null}
       </div>
 
       {/* Summary strip */}
@@ -365,6 +406,16 @@ export function DashboardClient({
           >
             Archive selected
           </Button>
+          {canManage ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={busy}
+              onClick={handleBulkDelete}
+            >
+              Delete selected
+            </Button>
+          ) : null}
           <div className="flex flex-wrap items-center gap-2">
             <Select value={bulkAdjuster} onValueChange={setBulkAdjuster}>
               <SelectTrigger className="h-8 w-full min-w-0 sm:w-[160px]">
@@ -397,13 +448,9 @@ export function DashboardClient({
           <div className="border border-brand-white/10 px-6 py-16 text-center">
             <p className="eyebrow mb-3">Secure Record</p>
             <p className="text-sm text-brand-slate">
-              No active files. Begin intake to open the first record.
+              No active files. Accepted BLACKGATE intakes appear here after they
+              are submitted.
             </p>
-            {canCreate ? (
-              <Button asChild className="mt-6" variant="outline">
-                <Link href="/claims/new">Open Intake</Link>
-              </Button>
-            ) : null}
           </div>
         ) : (
           <>
@@ -528,9 +575,22 @@ export function DashboardClient({
                             </div>
                           ) : null}
 
-                          <Button asChild size="sm" variant="solid" className="w-full">
-                            <Link href={`/claims/${c.id}`}>Open file</Link>
-                          </Button>
+                          <div className="flex flex-col gap-2">
+                            <Button asChild size="sm" variant="solid" className="w-full">
+                              <Link href={`/claims/${c.id}`}>Open file</Link>
+                            </Button>
+                            {canManage ? (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="w-full"
+                                disabled={busy}
+                                onClick={() => handleRowDelete(c.id, c.claimNumber)}
+                              >
+                                Delete
+                              </Button>
+                            ) : null}
+                          </div>
                         </div>
                       ) : null}
                     </li>
@@ -566,6 +626,11 @@ export function DashboardClient({
                       label="Est. Value"
                       className="text-right"
                     />
+                    {canManage ? (
+                      <th className="px-3 py-2.5 text-right font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
+                        Actions
+                      </th>
+                    ) : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -638,6 +703,19 @@ export function DashboardClient({
                       <td className="px-3 py-2.5 align-middle text-right font-mono text-xs">
                         {formatCurrency(c.estimatedValue)}
                       </td>
+                      {canManage ? (
+                        <td className="px-3 py-2.5 align-middle text-right">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            disabled={busy}
+                            onClick={() => handleRowDelete(c.id, c.claimNumber)}
+                          >
+                            Delete
+                          </Button>
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>

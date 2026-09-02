@@ -223,6 +223,10 @@ model Claim {
   /// rely on the schema default alone when isCatClaim is true.
   contingencyFeePercent  Decimal     @default(20.00) @db.Decimal(5, 2)
   assignedAdjusterId     String?
+  /// Originating product when the file was opened from a sibling system
+  sourceProduct          String?
+  sourceIntakeId         String?     @unique
+  sourceIntakeNumber     String?
   /// Claim dates (ops calendar — separate from dateOfLoss)
   initialContactDate        DateTime? @db.Date
   scheduledAppointmentDate  DateTime? @db.Date

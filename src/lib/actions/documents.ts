@@ -172,14 +172,16 @@ export async function deleteDocumentAction(
     });
     if (!doc) return { ok: false, error: "Document not found." };
 
-    if (doc.claimPolicies.length > 0) {
-      await prisma.claimPolicy.updateMany({
-        where: { documentId: doc.id },
-        data: { documentId: null },
-      });
-    }
-
-    await prisma.document.delete({ where: { id: doc.id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.documentVaultEntry.deleteMany({ where: { documentId: doc.id } });
+      if (doc.claimPolicies.length > 0) {
+        await tx.claimPolicy.updateMany({
+          where: { documentId: doc.id },
+          data: { documentId: null },
+        });
+      }
+      await tx.document.delete({ where: { id: doc.id } });
+    });
     await deleteStoredDocument(doc.fileUrl);
 
     await logClaimAudit({

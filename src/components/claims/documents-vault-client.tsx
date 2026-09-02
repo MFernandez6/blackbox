@@ -54,7 +54,7 @@ type Doc = {
   policyLine?: PolicyLine | null;
   isCertifiedPolicy?: boolean;
   displayPath?: string | null;
-  source?: "BLACKLETTER" | null;
+  source?: "BLACKLETTER" | "BLACKGATE" | null;
 };
 
 type Props = {
@@ -339,31 +339,36 @@ export function DocumentsVaultClient({
     }
   }
 
-  async function onDelete() {
-    if (!manageDoc) return;
+  async function deleteDoc(doc: Doc) {
     if (
       !confirm(
-        `Delete “${manageDoc.fileName}”? This cannot be undone.`
+        `Delete “${doc.fileName}”? This cannot be undone.`
       )
     ) {
-      return;
+      return false;
     }
     setManageError("");
     setManaging(true);
     try {
-      const result = await deleteDocumentAction(claimId, manageDoc.id);
+      const result = await deleteDocumentAction(claimId, doc.id);
       if (!result.ok) {
         setManageError(result.error);
         toast.error(result.error);
-        return;
+        return false;
       }
       toast.success("Document deleted");
       closeManage();
       setPreviewDoc(null);
       router.refresh();
+      return true;
     } finally {
       setManaging(false);
     }
+  }
+
+  async function onDelete() {
+    if (!manageDoc) return;
+    await deleteDoc(manageDoc);
   }
 
   return (
@@ -619,9 +624,9 @@ export function DocumentsVaultClient({
                       <span className="truncate text-brand-white">
                         {d.fileName}
                       </span>
-                      {d.source === "BLACKLETTER" ? (
+                      {d.source === "BLACKLETTER" || d.source === "BLACKGATE" ? (
                         <Badge className="border-brand-gold/50 text-brand-gold">
-                          BLACKLETTER
+                          {d.source}
                         </Badge>
                       ) : null}
                       {d.isCertifiedPolicy ? (
@@ -667,6 +672,18 @@ export function DocumentsVaultClient({
                           }}
                         >
                           Manage
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          disabled={managing}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void deleteDoc(d);
+                          }}
+                        >
+                          Delete
                         </Button>
                       </div>
                     </td>
@@ -719,12 +736,13 @@ export function DocumentsVaultClient({
                       · {previewDoc.uploaderName}
                     </dd>
                   </div>
-                  {previewDoc.source === "BLACKLETTER" ? (
+                  {previewDoc.source === "BLACKLETTER" ||
+                  previewDoc.source === "BLACKGATE" ? (
                     <div>
                       <dt className="eyebrow">Source</dt>
                       <dd>
                         <Badge className="border-brand-gold/50 text-brand-gold">
-                          BLACKLETTER
+                          {previewDoc.source}
                         </Badge>
                       </dd>
                     </div>

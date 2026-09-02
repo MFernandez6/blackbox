@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { ClaimStatus, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { requireSession, canEdit, canManagePayments } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { allocateClaimNumber } from "@/lib/claims/claim-number";
+import { openClaimFromIntake } from "@/lib/claims/open-from-intake";
+import { deleteStoredDocument } from "@/lib/storage";
 import { contingencyForCat } from "@/lib/utils";
 import {
   fnolIntakeSchema,
@@ -48,62 +49,9 @@ export async function createClaimAction(
       };
     }
 
-    const { claimants, property, policy, contingencyFeePercent } = parsed.data;
-
-    const claim = await prisma.$transaction(async (tx) => {
-      const claimNumber = await allocateClaimNumber(tx);
-      const created = await tx.claim.create({
-        data: {
-          claimNumber,
-          status: ClaimStatus.INTAKE,
-          lossType: property.lossType,
-          dateOfLoss: new Date(property.dateOfLoss),
-          propertyAddress: property.propertyAddress,
-          zipCode: property.zipCode.slice(0, 5),
-          county: property.county,
-          lossDescription: property.lossDescription,
-          isCatClaim: property.isCatClaim,
-          contingencyFeePercent,
-          policyNumber: policy.policyNumber || null,
-          carrierName: policy.carrierName || null,
-          insurerClaimNumber: policy.insurerClaimNumber || null,
-          deskExaminerName: policy.deskExaminerName || null,
-          deskExaminerPhone: policy.deskExaminerPhone || null,
-          deskExaminerEmail: policy.deskExaminerEmail || null,
-          fieldAdjusterName: policy.fieldAdjusterName || null,
-          fieldAdjusterPhone: policy.fieldAdjusterPhone || null,
-          fieldAdjusterEmail: policy.fieldAdjusterEmail || null,
-          experts:
-            policy.experts && policy.experts.length > 0
-              ? policy.experts.filter((e) => e.name.trim())
-              : Prisma.JsonNull,
-          estimatedValue:
-            policy.estimatedValue !== null && policy.estimatedValue !== undefined
-              ? new Prisma.Decimal(policy.estimatedValue)
-              : null,
-          assignedAdjusterId: session.user.id,
-          claimants: {
-            create: claimants.map((c) => ({
-              firstName: c.firstName,
-              lastName: c.lastName,
-              email: c.email,
-              phone: c.phone,
-              mailingAddress: c.mailingAddress,
-              preferredContactMethod: c.preferredContactMethod,
-              isPrimaryContact: c.isPrimaryContact,
-            })),
-          },
-          statusHistory: {
-            create: {
-              previousStatus: null,
-              newStatus: ClaimStatus.INTAKE,
-              changedById: session.user.id,
-              note: "Record opened. File integrity: sealed at intake.",
-            },
-          },
-        },
-      });
-      return created;
+    const claim = await openClaimFromIntake({
+      parsed: parsed.data,
+      actorId: session.user.id,
     });
 
     revalidatePath("/dashboard");
@@ -185,6 +133,65 @@ export async function archiveClaimAction(
   } catch (e) {
     console.error(e);
     return { ok: false, error: "Archive failed." };
+  }
+}
+
+export async function deleteClaimAction(
+  claimId: string
+): Promise<ActionResult> {
+  try {
+    const session = await requireSession();
+    if (session.user.role !== "ADMIN") {
+      return { ok: false, error: "Only an admin can permanently delete a file." };
+    }
+
+    const claim = await prisma.claim.findUnique({
+      where: { id: claimId },
+      include: { documents: { select: { id: true, fileUrl: true } } },
+    });
+    if (!claim) return { ok: false, error: "Claim not found." };
+
+    await prisma.$transaction(async (tx) => {
+      await tx.documentVaultEntry.deleteMany({ where: { claimId } });
+      await tx.claimPolicy.updateMany({
+        where: { claimId },
+        data: { documentId: null },
+      });
+      await tx.claimPolicy.deleteMany({ where: { claimId } });
+      await tx.document.deleteMany({ where: { claimId } });
+      // BLACKMIRROR tables live on the shared DB but are not in this schema.
+      await tx.$executeRaw`
+        DELETE FROM "Photo"
+        WHERE "inspectionId" IN (SELECT id FROM "Inspection" WHERE "claimId" = ${claimId})
+           OR "inspectionSessionId" IN (SELECT id FROM "InspectionSession" WHERE "claimId" = ${claimId})
+      `;
+      await tx.$executeRaw`
+        DELETE FROM "InspectionItem"
+        WHERE "inspectionId" IN (SELECT id FROM "Inspection" WHERE "claimId" = ${claimId})
+      `;
+      await tx.$executeRaw`DELETE FROM "InspectionSession" WHERE "claimId" = ${claimId}`;
+      await tx.$executeRaw`DELETE FROM "Inspection" WHERE "claimId" = ${claimId}`;
+      await tx.$executeRaw`DELETE FROM "Property" WHERE "claimId" = ${claimId}`;
+      await tx.claimant.deleteMany({ where: { claimId } });
+      await tx.statusHistory.deleteMany({ where: { claimId } });
+      await tx.payment.deleteMany({ where: { claimId } });
+      await tx.claimContact.deleteMany({ where: { claimId } });
+      await tx.claimTask.deleteMany({ where: { claimId } });
+      await tx.claimNote.deleteMany({ where: { claimId } });
+      await tx.claimEmail.deleteMany({ where: { claimId } });
+      await tx.claimAuditEvent.deleteMany({ where: { claimId } });
+      await tx.claim.delete({ where: { id: claimId } });
+    });
+
+    await Promise.all(
+      claim.documents.map((doc) => deleteStoredDocument(doc.fileUrl))
+    );
+
+    revalidatePath("/dashboard");
+    return { ok: true, data: undefined };
+  } catch (e) {
+    console.error(e);
+    return { ok: false, error: "Unable to delete file." };
   }
 }
 

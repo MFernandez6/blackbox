@@ -9,6 +9,7 @@ import {
 import { ClaimDetailSkeleton } from "@/components/claims/claim-detail-skeleton";
 import type { CarrierExpertInput } from "@/lib/schemas/claim";
 import { parseLimitsJson } from "@/lib/policy-extraction";
+import { blackletterAppUrl } from "@/lib/integrations/blackletter";
 
 export const dynamic = "force-dynamic";
 
@@ -155,6 +156,9 @@ async function ClaimDetailDataLoader({
     estimateSentDate: isoDate(claim.estimateSentDate),
     isArchived: claim.isArchived,
     createdAt: claim.createdAt.toISOString(),
+    sourceProduct: claim.sourceProduct,
+    sourceIntakeId: claim.sourceIntakeId,
+    sourceIntakeNumber: claim.sourceIntakeNumber,
     claimants: claim.claimants.map((c) => ({
       id: c.id,
       firstName: c.firstName,
@@ -185,13 +189,17 @@ async function ClaimDetailDataLoader({
       policyLine: d.policyLine,
       isCertifiedPolicy: d.isCertifiedPolicy,
       displayPath: d.vaultEntry?.displayPath ?? null,
-      source:
-        d.extractedData &&
-        typeof d.extractedData === "object" &&
-        !Array.isArray(d.extractedData) &&
-        (d.extractedData as { source?: string }).source === "BLACKLETTER"
-          ? "BLACKLETTER"
-          : null,
+      source: (() => {
+        const source =
+          d.extractedData &&
+          typeof d.extractedData === "object" &&
+          !Array.isArray(d.extractedData)
+            ? (d.extractedData as { source?: string }).source
+            : null;
+        return source === "BLACKLETTER" || source === "BLACKGATE"
+          ? source
+          : null;
+      })(),
     })),
     auditEvents: claim.auditEvents.map((e) => ({
       id: e.id,
@@ -254,6 +262,7 @@ async function ClaimDetailDataLoader({
       adjusters={adjusters}
       role={session.user.role}
       initialTab={tab}
+      letterUrl={blackletterAppUrl() ?? "http://localhost:3004"}
     />
   );
 }

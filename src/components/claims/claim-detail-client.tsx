@@ -12,6 +12,7 @@ import { formatCurrency, formatFeePercent, projectedContingencyFee } from "@/lib
 import {
   changeClaimStatusAction,
   archiveClaimAction,
+  deleteClaimAction,
 } from "@/lib/actions/claims";
 import type {
   ClaimDetailData,
@@ -27,6 +28,7 @@ import {
   DatesTab,
 } from "@/components/claims/tabs";
 import { DocumentsVaultClient } from "@/components/claims/documents-vault-client";
+import { NextDocumentCard } from "@/components/claims/next-document-card";
 import { StatusBadge } from "@/components/claims/status-badge";
 import { GoogleMapsButton } from "@/components/claims/google-maps-button";
 import { ClaimField } from "@/components/claims/claim-field";
@@ -74,6 +76,7 @@ type Props = {
   adjusters: AdjusterOption[];
   role: AdjusterRole;
   initialTab?: string;
+  letterUrl: string;
 };
 
 export function ClaimDetailClient({
@@ -81,11 +84,13 @@ export function ClaimDetailClient({
   adjusters,
   role,
   initialTab,
+  letterUrl,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const editable = canEdit(role);
+  const canDelete = role === "ADMIN";
 
   const tabFromUrl = searchParams.get("tab");
   const normalizedTab =
@@ -159,6 +164,23 @@ export function ClaimDetailClient({
     router.push("/dashboard");
   }
 
+  async function removeFile() {
+    if (
+      !confirm(
+        `Permanently delete ${claim.claimNumber}? Related records will be removed. This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    const result = await deleteClaimAction(claim.id);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    toast.success("File deleted");
+    router.push("/dashboard");
+  }
+
   return (
     <div className="min-w-0 space-y-6">
       {error ? (
@@ -199,6 +221,11 @@ export function ClaimDetailClient({
                 {claim.isArchived ? (
                   <Badge className="border-denied/50 bg-denied-muted font-serif text-denied-soft">
                     Archived
+                  </Badge>
+                ) : null}
+                {claim.sourceProduct === "BLACKGATE" && claim.sourceIntakeNumber ? (
+                  <Badge className="border-brand-gold/40 font-serif text-brand-gold">
+                    BLACKGATE · {claim.sourceIntakeNumber}
                   </Badge>
                 ) : null}
               </div>
@@ -272,9 +299,35 @@ export function ClaimDetailClient({
                 </Button>
               </>
             ) : null}
+            {canDelete ? (
+              <Button
+                size="sm"
+                variant="destructive"
+                className="w-full sm:w-auto"
+                onClick={removeFile}
+              >
+                Delete
+              </Button>
+            ) : null}
           </div>
         </div>
       </div>
+
+      {claim.sourceProduct === "BLACKGATE" && claim.sourceIntakeId ? (
+        <div className="border border-brand-white/10 px-4 py-3">
+          <p className="eyebrow">BLACKGATE</p>
+          <p className="mt-2 text-sm text-brand-white/80">
+            Opened from intake {claim.sourceIntakeNumber ?? claim.sourceIntakeId}.
+            Documents collected at the gate are filed in this vault.
+          </p>
+        </div>
+      ) : null}
+
+      <NextDocumentCard
+        claimId={claim.id}
+        claimNumber={claim.claimNumber}
+        letterUrl={letterUrl}
+      />
 
       <Tabs value={activeTab} onValueChange={setTab}>
         <TabsList>
