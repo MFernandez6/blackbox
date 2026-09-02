@@ -10,11 +10,14 @@ import { prisma } from "@/lib/prisma";
 
 function authorized(req: NextRequest, hasSession: boolean): boolean {
   if (hasSession) return true;
-  const key = process.env.BLACKLEDGER_API_KEY;
-  if (!key) return false;
+  const keys = [
+    process.env.BLACKLEDGER_API_KEY,
+    process.env.BLACKBOX_API_KEY,
+  ].filter((key): key is string => !!key);
+  if (keys.length === 0) return false;
   const header = req.headers.get("authorization");
   const token = header?.startsWith("Bearer ") ? header.slice(7) : header;
-  return token === key;
+  return !!token && keys.includes(token);
 }
 
 function money(value: { toString(): string } | number | null | undefined): number | null {
