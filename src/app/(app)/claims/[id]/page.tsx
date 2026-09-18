@@ -10,6 +10,7 @@ import { ClaimDetailSkeleton } from "@/components/claims/claim-detail-skeleton";
 import type { CarrierExpertInput } from "@/lib/schemas/claim";
 import { parseLimitsJson } from "@/lib/policy-extraction";
 import { blackletterAppUrl } from "@/lib/integrations/blackletter";
+import { blackgateAppUrl } from "@/lib/integrations/blackgate";
 
 export const dynamic = "force-dynamic";
 
@@ -263,6 +264,7 @@ async function ClaimDetailDataLoader({
       role={session.user.role}
       initialTab={tab}
       letterUrl={blackletterAppUrl() ?? "http://localhost:3004"}
+      gateUrl={blackgateAppUrl()}
     />
   );
 }

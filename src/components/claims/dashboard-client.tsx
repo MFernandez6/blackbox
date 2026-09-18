@@ -63,6 +63,8 @@ type Props = {
   canManage: boolean;
   role: AdjusterRole;
   currentUserId: string;
+  /** Public BLACKGATE base URL for staff handoff guidance. */
+  gateUrl?: string | null;
 };
 
 const ALL_STATUSES = Object.keys(STATUS_LABELS) as ClaimStatus[];
@@ -74,6 +76,7 @@ export function DashboardClient({
   adjusters,
   canEditClaims,
   canManage,
+  gateUrl,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -448,9 +451,22 @@ export function DashboardClient({
           <div className="border border-brand-white/10 px-6 py-16 text-center">
             <p className="eyebrow mb-3">Secure Record</p>
             <p className="text-sm text-brand-slate">
-              No active files. Accepted BLACKGATE intakes appear here after they
-              are submitted.
+              No active files. Creating an intake in BLACKGATE keeps it at the
+              gate — it only appears here after Accept, then{" "}
+              <span className="text-brand-white/80">Promote to BLACKBOX</span>.
             </p>
+            {gateUrl ? (
+              <p className="mt-4">
+                <a
+                  href={gateUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold hover:underline"
+                >
+                  Open BLACKGATE
+                </a>
+              </p>
+            ) : null}
           </div>
         ) : (
           <>

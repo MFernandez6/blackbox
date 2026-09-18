@@ -101,12 +101,13 @@ Policy parse is wired to Anthropic (`src/lib/policy-ai.ts`). Document list may s
 
 Intake lives in [BLACKGATE](../blackgate) (port 3002). BLACKBOX no longer has a staff intake tab.
 
-- New files appear on the Files dashboard after BLACKGATE promote — there is no Gate / intake tab in BLACKBOX.
+- New files appear on the Files dashboard after BLACKGATE **promote** — creating or submitting an intake alone does not open a BLACKBOX claim. There is no Gate / intake tab in BLACKBOX.
+- Flow in BLACKGATE: triage **Accept** → complete required checklist items → **Promote to BLACKBOX claim**.
 - BLACKGATE promote calls `POST /api/claims/intake` with `Authorization: Bearer $BLACKBOX_API_KEY`.
 - Collected files follow on `POST /api/claims/intake/documents`.
 - Promoted files keep `sourceIntakeNumber` / `sourceIntakeId` and link back to the original gate record.
 
-On BLACKGATE, set the same `BLACKBOX_API_KEY` and turn `BLACKBOX_DRY_RUN` off so promote writes a live claim instead of a simulated `BL-YY-####`.
+On BLACKGATE, set the same `BLACKBOX_API_KEY` and turn `BLACKBOX_DRY_RUN` off so promote writes a live claim instead of a simulated `BL-YY-####`. A dry-run handoff looks successful in BLACKGATE but never appears in BLACKBOX.
 
 ## BLACKLEDGER export
 
