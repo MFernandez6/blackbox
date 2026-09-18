@@ -109,6 +109,8 @@ Intake lives in [BLACKGATE](../blackgate) (port 3002). BLACKBOX no longer has a 
 
 On BLACKGATE, set the same `BLACKBOX_API_KEY` and turn `BLACKBOX_DRY_RUN` off so promote writes a live claim instead of a simulated `BL-YY-####`. A dry-run handoff looks successful in BLACKGATE but never appears in BLACKBOX.
 
+If an intake is already stuck as **Promoted** with no BLACKBOX file (example: Hailey Fernandez / `BG-26-0002`), an ADMIN can open it from the Files dashboard **BLACKGATE repair** panel — Import intake or Repair all missing handoffs. That reads the shared `blackgate` schema and opens the claim in place.
+
 ## BLACKLEDGER export
 
 `GET /api/ledger/claims` is a read-only financial snapshot for BLACKLEDGER (port 3003). Authenticate with a staff session or `Authorization: Bearer $BLACKLEDGER_API_KEY`. Writes are rejected (405). Claim status cannot be changed from that route.

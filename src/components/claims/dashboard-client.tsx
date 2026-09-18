@@ -30,6 +30,10 @@ import {
   bulkAssignClaimsAction,
 } from "@/lib/actions/dashboard";
 import { deleteClaimAction } from "@/lib/actions/claims";
+import {
+  importGateIntakeAction,
+  repairGateHandoffsAction,
+} from "@/lib/actions/gate-repair";
 import { cn, daysOpen, formatCurrency } from "@/lib/utils";
 
 export type DashboardClaimRow = {
@@ -86,6 +90,7 @@ export function DashboardClient({
   const [bulkAdjuster, setBulkAdjuster] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [gateIntakeNumber, setGateIntakeNumber] = useState("BG-26-0002");
 
   function toggleExpanded(id: string) {
     setExpanded((prev) => {
@@ -230,6 +235,50 @@ export function DashboardClient({
     router.refresh();
   }
 
+  async function handleRepairGateHandoffs() {
+    if (
+      !confirm(
+        "Repair all BLACKGATE intakes marked PROMOTED that have no BLACKBOX claim? This opens the missing files from the shared gate database."
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    const result = await repairGateHandoffsAction();
+    setBusy(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    const n = result.data.results.length;
+    if (n === 0) {
+      toast.message("No broken gate handoffs found.");
+    } else {
+      toast.success(
+        `Opened ${n} file${n === 1 ? "" : "s"}: ${result.data.results
+          .map((r) => r.claimNumber)
+          .join(", ")}`
+      );
+    }
+    router.refresh();
+  }
+
+  async function handleImportGateIntake() {
+    setBusy(true);
+    const result = await importGateIntakeAction(gateIntakeNumber);
+    setBusy(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(
+      result.data.reused
+        ? `Already on file · ${result.data.claimNumber}`
+        : `Opened ${result.data.claimNumber} from ${result.data.intakeNumber}`
+    );
+    router.refresh();
+  }
+
   function sortLink(col: string) {
     const nextDir = sort === col && dir === "desc" ? "asc" : "desc";
     const params = new URLSearchParams(searchParams.toString());
@@ -274,6 +323,45 @@ export function DashboardClient({
           </h1>
         </div>
       </div>
+
+      {canManage ? (
+        <div className="space-y-3 border border-brand-amber/30 bg-brand-amber/5 p-4">
+          <p className="eyebrow text-brand-amber">BLACKGATE repair</p>
+          <p className="text-sm text-brand-slate">
+            If a gate intake shows Promoted / “lives in BLACKBOX” but no file
+            appears here, the handoff was likely a dry-run. Import it from the
+            shared gate database.
+          </p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="gate-intake-number">Intake number</Label>
+              <Input
+                id="gate-intake-number"
+                value={gateIntakeNumber}
+                onChange={(e) => setGateIntakeNumber(e.target.value)}
+                placeholder="BG-26-0002"
+                className="w-44 font-mono"
+              />
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy || !gateIntakeNumber.trim()}
+              onClick={() => void handleImportGateIntake()}
+            >
+              Import intake
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              onClick={() => void handleRepairGateHandoffs()}
+            >
+              Repair all missing handoffs
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Summary strip */}
       <div className="grid gap-0 border border-brand-white/10 md:grid-cols-3">

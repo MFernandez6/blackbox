@@ -1,0 +1,335 @@
+From d058e475481ef8c7e9e846e13deeb0a22fcc02f3 Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Fri, 18 Sep 2026 01:28:22 +0000
+Subject: [PATCH 1/2] Fix BLACKBOX document handoff and clarify promote vs
+ create.
+
+Carry intake docs to /api/claims/intake/documents instead of /api/upload,
+and make dry-run / pre-promote copy warn that create alone never opens a
+BLACKBOX file.
+---
+ .env.example                           |  3 ++-
+ src/components/triage/triage-panel.tsx | 13 ++++++++++---
+ src/lib/integrations/blackbox.ts       | 17 ++++++++++-------
+ 3 files changed, 22 insertions(+), 11 deletions(-)
+
+diff --git a/.env.example b/.env.example
+index 5ad5a5a..96b2b8b 100644
+--- a/.env.example
++++ b/.env.example
+@@ -21,7 +21,8 @@ UPLOAD_DIR="public/uploads"
+ # Sibling integrations (optional — dry-run when unset)
+ # ---------------------------------------------------------------------------
+ 
+-# BLACKBOX claim creation. When unset, promote records a dry-run handoff.
++# BLACKBOX claim creation. When unset or BLACKBOX_DRY_RUN=1, promote
++# records a dry-run handoff — BLACKBOX will NOT show the claim.
+ BLACKBOX_API_URL="http://localhost:3000"
+ BLACKBOX_API_KEY=
+ # Set to 1 to always simulate a successful promote (local demo)
+diff --git a/src/components/triage/triage-panel.tsx b/src/components/triage/triage-panel.tsx
+index a2484d5..f8b774d 100644
+--- a/src/components/triage/triage-panel.tsx
++++ b/src/components/triage/triage-panel.tsx
+@@ -58,7 +58,7 @@ export function TriagePanel({
+     }
+     toast.success(
+       result.data.dryRun
+-        ? `Dry-run promote · ${result.data.claimNumber}`
++        ? `Dry-run only · ${result.data.claimNumber} — not written to BLACKBOX (set BLACKBOX_API_KEY and turn BLACKBOX_DRY_RUN off)`
+         : `Promoted to BLACKBOX · ${result.data.claimNumber}`
+     );
+     router.refresh();
+@@ -130,8 +130,8 @@ export function TriagePanel({
+       {canPromote && status === "ACCEPTED" ? (
+         <div className="space-y-3 border-t border-brand-white/10 pt-4">
+           <p className="text-sm text-brand-white/75">
+-            One-click promote creates the BLACKBOX claim, carries collected
+-            documents, and closes the intake loop.
++            Creating the intake does not open a BLACKBOX file. Promote creates
++            the claim, carries collected documents, and closes the intake loop.
+             {!checklistComplete
+               ? " Required items still need a status — collected, generated later, waived, N/A, or field task. A field task does not hold the handoff; inspection can happen after the file is open."
+               : " Field tasks stay open after promote — they do not hold this handoff."}
+@@ -147,6 +147,13 @@ export function TriagePanel({
+         </div>
+       ) : null}
+ 
++      {status !== "ACCEPTED" && status !== "PROMOTED" && status !== "DECLINED" ? (
++        <p className="text-sm text-brand-slate">
++          This intake stays in BLACKGATE until a gatekeeper Accepts it, then
++          Promotes it. BLACKBOX will not list it until that handoff succeeds.
++        </p>
++      ) : null}
++
+       {status === "PROMOTED" ? (
+         <p className="text-sm text-brand-gold">This gate is closed. File lives in BLACKBOX.</p>
+       ) : null}
+diff --git a/src/lib/integrations/blackbox.ts b/src/lib/integrations/blackbox.ts
+index 6029572..870fc85 100644
+--- a/src/lib/integrations/blackbox.ts
++++ b/src/lib/integrations/blackbox.ts
+@@ -1,9 +1,9 @@
+ /**
+  * BLACKBOX handoff — instantiate a claim from an accepted intake.
+  *
+- * Expected BLACKBOX contract (not yet shipped in blackbox; reserved at
+- * /api/claims/intake): POST JSON matching fnolIntakeSchema, return
+- * { id, claimNumber }. Documents follow via POST /api/upload.
++ * Contract: POST /api/claims/intake (Bearer BLACKBOX_API_KEY) with payload
++ * matching BlackboxClaimPayload; documents follow via
++ * POST /api/claims/intake/documents.
+  */
+ 
+ export type BlackboxClaimPayload = {
+@@ -56,11 +56,14 @@ export function mapLossTypeForBlackbox(
+   return "OTHER";
+ }
+ 
++function isDryRun(): boolean {
++  return process.env.BLACKBOX_DRY_RUN === "1" || !process.env.BLACKBOX_API_KEY;
++}
++
+ export async function createBlackboxClaim(
+   payload: BlackboxClaimPayload
+ ): Promise<BlackboxResult> {
+-  const dryRun = process.env.BLACKBOX_DRY_RUN === "1" || !process.env.BLACKBOX_API_KEY;
+-  if (dryRun) {
++  if (isDryRun()) {
+     const yy = String(new Date().getFullYear()).slice(-2);
+     const stamp = String(Date.now()).slice(-4);
+     return {
+@@ -109,14 +112,14 @@ export async function attachDocumentToBlackboxClaim(opts: {
+   fileUrl: string;
+   mimeType: string;
+ }): Promise<{ ok: boolean; error?: string }> {
+-  if (process.env.BLACKBOX_DRY_RUN === "1" || !process.env.BLACKBOX_API_KEY) {
++  if (isDryRun()) {
+     return { ok: true };
+   }
+   const base = process.env.BLACKBOX_API_URL?.replace(/\/$/, "");
+   if (!base) return { ok: false, error: "BLACKBOX_API_URL is not configured." };
+ 
+   try {
+-    const res = await fetch(`${base}/api/upload`, {
++    const res = await fetch(`${base}/api/claims/intake/documents`, {
+       method: "POST",
+       headers: {
+         "Content-Type": "application/json",
+-- 
+2.43.0
+
+
+From 33d2e25d803b90271649481e9ea979f71e01132c Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Fri, 18 Sep 2026 02:50:00 +0000
+Subject: [PATCH 2/2] Stop dry-run promote from faking a live BLACKBOX handoff.
+
+Dry-run / missing API key now fails the promote, leaves the gate reopenable,
+and documents must post to /api/claims/intake/documents. Stuck PROMOTED intakes
+can retry after env is fixed.
+---
+ src/app/(app)/intakes/[id]/page.tsx    |  9 +++++
+ src/components/triage/triage-panel.tsx | 44 +++++++++++++-------
+ src/lib/actions/promote.ts             | 56 +++++++++++++++++++++++++-
+ 3 files changed, 93 insertions(+), 16 deletions(-)
+
+diff --git a/src/app/(app)/intakes/[id]/page.tsx b/src/app/(app)/intakes/[id]/page.tsx
+index 417c7d1..f5b30a6 100644
+--- a/src/app/(app)/intakes/[id]/page.tsx
++++ b/src/app/(app)/intakes/[id]/page.tsx
+@@ -45,6 +45,13 @@ export default async function IntakeDetailPage({
+ 
+   const progress = checklistProgress(intake.checklistItems);
+   const role = session.user.role;
++  const lastHandoff = intake.handoffs[0] ?? null;
++  const lastHandoffDryOrFailed = Boolean(
++    lastHandoff &&
++      (lastHandoff.status === "FAILED" ||
++        lastHandoff.blackboxClaimId?.startsWith("dry-") ||
++        lastHandoff.payloadJson?.includes('"dryRun":true'))
++  );
+ 
+   const facts: Array<[string, string]> = [
+     ["Type", CLAIM_TYPE_LABELS[intake.claimType as keyof typeof CLAIM_TYPE_LABELS]],
+@@ -126,6 +133,8 @@ export default async function IntakeDetailPage({
+             canTriage={canTriage(role as import("@/lib/types").StaffRole)}
+             canPromote={canPromote(role as import("@/lib/types").StaffRole)}
+             checklistComplete={progress.complete}
++            lastHandoffDryOrFailed={lastHandoffDryOrFailed}
++            lastHandoffClaimNumber={lastHandoff?.blackboxClaimNumber ?? null}
+           />
+ 
+           {intake.referral ? (
+diff --git a/src/components/triage/triage-panel.tsx b/src/components/triage/triage-panel.tsx
+index f8b774d..b0dc7bf 100644
+--- a/src/components/triage/triage-panel.tsx
++++ b/src/components/triage/triage-panel.tsx
+@@ -18,12 +18,16 @@ export function TriagePanel({
+   canTriage,
+   canPromote,
+   checklistComplete,
++  lastHandoffDryOrFailed = false,
++  lastHandoffClaimNumber = null,
+ }: {
+   intakeId: string;
+   status: string;
+   canTriage: boolean;
+   canPromote: boolean;
+   checklistComplete: boolean;
++  lastHandoffDryOrFailed?: boolean;
++  lastHandoffClaimNumber?: string | null;
+ }) {
+   const router = useRouter();
+   const [error, setError] = useState("");
+@@ -56,14 +60,14 @@ export function TriagePanel({
+       setError(result.error);
+       return;
+     }
+-    toast.success(
+-      result.data.dryRun
+-        ? `Dry-run only · ${result.data.claimNumber} — not written to BLACKBOX (set BLACKBOX_API_KEY and turn BLACKBOX_DRY_RUN off)`
+-        : `Promoted to BLACKBOX · ${result.data.claimNumber}`
+-    );
++    toast.success(`Promoted to BLACKBOX · ${result.data.claimNumber}`);
+     router.refresh();
+   }
+ 
++  const showPromote =
++    canPromote &&
++    (status === "ACCEPTED" || (status === "PROMOTED" && lastHandoffDryOrFailed));
++
+   return (
+     <div className="panel space-y-4 p-5">
+       <p className="eyebrow">Gatekeeper decision</p>
+@@ -127,22 +131,32 @@ export function TriagePanel({
+         </form>
+       ) : null}
+ 
+-      {canPromote && status === "ACCEPTED" ? (
++      {showPromote ? (
+         <div className="space-y-3 border-t border-brand-white/10 pt-4">
+-          <p className="text-sm text-brand-white/75">
+-            Creating the intake does not open a BLACKBOX file. Promote creates
+-            the claim, carries collected documents, and closes the intake loop.
+-            {!checklistComplete
+-              ? " Required items still need a status — collected, generated later, waived, N/A, or field task. A field task does not hold the handoff; inspection can happen after the file is open."
+-              : " Field tasks stay open after promote — they do not hold this handoff."}
+-          </p>
++          {status === "PROMOTED" && lastHandoffDryOrFailed ? (
++            <p className="text-sm text-denied">
++              Prior handoff did not write a live BLACKBOX claim
++              {lastHandoffClaimNumber ? ` (${lastHandoffClaimNumber})` : ""}.
++              Fix BLACKBOX_API_KEY / BLACKBOX_DRY_RUN on Vercel, then retry.
++            </p>
++          ) : (
++            <p className="text-sm text-brand-white/75">
++              Creating the intake does not open a BLACKBOX file. Promote creates
++              the claim, carries collected documents, and closes the intake loop.
++              {!checklistComplete
++                ? " Required items still need a status — collected, generated later, waived, N/A, or field task. A field task does not hold the handoff; inspection can happen after the file is open."
++                : " Field tasks stay open after promote — they do not hold this handoff."}
++            </p>
++          )}
+           <Button
+             type="button"
+             variant="amber"
+             disabled={busy || !checklistComplete}
+             onClick={() => void promote()}
+           >
+-            Promote to BLACKBOX claim
++            {status === "PROMOTED" && lastHandoffDryOrFailed
++              ? "Retry promote to BLACKBOX"
++              : "Promote to BLACKBOX claim"}
+           </Button>
+         </div>
+       ) : null}
+@@ -154,7 +168,7 @@ export function TriagePanel({
+         </p>
+       ) : null}
+ 
+-      {status === "PROMOTED" ? (
++      {status === "PROMOTED" && !lastHandoffDryOrFailed ? (
+         <p className="text-sm text-brand-gold">This gate is closed. File lives in BLACKBOX.</p>
+       ) : null}
+     </div>
+diff --git a/src/lib/actions/promote.ts b/src/lib/actions/promote.ts
+index aa4647c..0b30c1f 100644
+--- a/src/lib/actions/promote.ts
++++ b/src/lib/actions/promote.ts
+@@ -35,10 +35,42 @@ export async function promoteIntakeAction(
+       },
+     });
+     if (!intake) return { ok: false, error: "Intake not found." };
+-    if (intake.status !== "ACCEPTED") {
++    if (intake.status !== "ACCEPTED" && intake.status !== "PROMOTED") {
+       return { ok: false, error: "Accept the intake at triage before promoting." };
+     }
+ 
++    if (intake.status === "PROMOTED") {
++      const lastHandoff = await prisma.handoffLog.findFirst({
++        where: { intakeId },
++        orderBy: { createdAt: "desc" },
++      });
++      const dryStuck =
++        lastHandoff?.blackboxClaimId?.startsWith("dry-") ||
++        (lastHandoff?.payloadJson?.includes('"dryRun":true') ?? false) ||
++        lastHandoff?.status === "FAILED";
++      const liveClaim =
++        lastHandoff?.blackboxClaimId &&
++        !lastHandoff.blackboxClaimId.startsWith("dry-") &&
++        lastHandoff.status === "SUCCEEDED";
++      if (liveClaim) {
++        return {
++          ok: false,
++          error: `Already promoted to ${lastHandoff?.blackboxClaimNumber ?? "BLACKBOX"}.`,
++        };
++      }
++      if (!dryStuck) {
++        return {
++          ok: false,
++          error: "Accept the intake at triage before promoting.",
++        };
++      }
++      // Dry-run / failed handoff left status PROMOTED — reopen for a live promote.
++      await prisma.intake.update({
++        where: { id: intakeId },
++        data: { status: "ACCEPTED" },
++      });
++    }
++
+     const progress = checklistProgress(intake.checklistItems);
+     if (!progress.complete) {
+       return {
+@@ -97,6 +129,28 @@ export async function promoteIntakeAction(
+       return { ok: false, error: created.error };
+     }
+ 
++    if (created.dryRun) {
++      await prisma.handoffLog.create({
++        data: {
++          intakeId: intake.id,
++          status: "FAILED",
++          blackboxClaimId: created.id,
++          blackboxClaimNumber: created.claimNumber,
++          payloadJson: JSON.stringify({ ...payload, dryRun: true }),
++          errorMessage:
++            "Dry-run only — BLACKBOX was not written. Set BLACKBOX_API_KEY and turn BLACKBOX_DRY_RUN off, then promote again.",
++          performedById: session.user.id,
++        },
++      });
++      revalidatePath("/queue");
++      revalidatePath(`/intakes/${intake.id}`);
++      return {
++        ok: false,
++        error:
++          "Dry-run only — nothing was written to BLACKBOX. On Vercel BLACKGATE, set BLACKBOX_API_KEY, BLACKBOX_API_URL=https://blackbox-claims.vercel.app, and BLACKBOX_DRY_RUN=0, then promote again.",
++      };
++    }
++
+     let carried = 0;
+     for (const doc of intake.documents) {
+       const attached = await attachDocumentToBlackboxClaim({
+-- 
+2.43.0
+
