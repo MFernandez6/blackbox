@@ -77,6 +77,7 @@ type Props = {
   role: AdjusterRole;
   initialTab?: string;
   letterUrl: string;
+  gateUrl?: string | null;
 };
 
 export function ClaimDetailClient({
@@ -85,6 +86,7 @@ export function ClaimDetailClient({
   role,
   initialTab,
   letterUrl,
+  gateUrl,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -320,6 +322,18 @@ export function ClaimDetailClient({
             Opened from intake {claim.sourceIntakeNumber ?? claim.sourceIntakeId}.
             Documents collected at the gate are filed in this vault.
           </p>
+          {gateUrl ? (
+            <p className="mt-3">
+              <a
+                href={`${gateUrl.replace(/\/$/, "")}/intakes/${encodeURIComponent(claim.sourceIntakeId)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold hover:underline"
+              >
+                View intake in BLACKGATE
+              </a>
+            </p>
+          ) : null}
         </div>
       ) : null}
 

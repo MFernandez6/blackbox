@@ -9,6 +9,7 @@ import {
 } from "@/components/claims/dashboard-client";
 import { DashboardMyWork } from "@/components/claims/dashboard-my-work";
 import { DashboardSkeleton } from "@/components/claims/dashboard-skeleton";
+import { blackgateAppUrl } from "@/lib/integrations/blackgate";
 
 export const dynamic = "force-dynamic";
 
@@ -323,6 +324,7 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
         canManage={session.user.role === "ADMIN"}
         role={session.user.role}
         currentUserId={session.user.id}
+        gateUrl={blackgateAppUrl()}
       />
       <DashboardMyWork
         assigned={assignedClaims.map((c) => ({
