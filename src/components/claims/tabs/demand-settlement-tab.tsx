@@ -12,6 +12,8 @@ import { createPaymentAction } from "@/lib/actions/claims";
 import { updateDemandSettlementAction } from "@/lib/actions/demand-settlement";
 import type { ClaimWorkspaceProps } from "@/components/claims/claim-detail-types";
 import { ClaimField } from "@/components/claims/claim-field";
+import { SettlementEstimatePanel } from "@/components/claims/settlement-estimate-panel";
+import { FirmHistoryPanel } from "@/components/claims/firm-history-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -218,6 +220,22 @@ export function DemandSettlementTab({
           />
         </dl>
       </section>
+
+      <SettlementEstimatePanel
+        claimId={claim.id}
+        county={claim.county}
+        feePercent={feePct}
+        isCatClaim={claim.isCatClaim}
+        initial={claim.settlementEstimate}
+        canRun={editable && !claim.isArchived}
+      />
+
+      <FirmHistoryPanel
+        history={claim.firmHistory}
+        feePercent={feePct}
+        isCatClaim={claim.isCatClaim}
+        marketLikely={claim.settlementEstimate?.range.likely ?? null}
+      />
 
       {paymentsOk ? (
         <PaymentPanel claimId={claim.id} payments={claim.payments} />

@@ -10,8 +10,12 @@ import { ClaimDetailSkeleton } from "@/components/claims/claim-detail-skeleton";
 import type { CarrierExpertInput } from "@/lib/schemas/claim";
 import { parseLimitsJson } from "@/lib/policy-extraction";
 import { blackletterAppUrl } from "@/lib/integrations/blackletter";
+import { coerceSettlementEstimate } from "@/lib/claims/settlement-estimate";
+import { loadFirmHistory } from "@/lib/claims/firm-history";
 
 export const dynamic = "force-dynamic";
+/** Settlement estimate server action runs Claude web research on this route. */
+export const maxDuration = 300;
 
 function isoDate(value: Date | null | undefined): string | null {
   return value ? value.toISOString() : null;
@@ -82,11 +86,14 @@ async function ClaimDetailDataLoader({
     redirect("/dashboard");
   }
 
-  const adjusters = await prisma.adjuster.findMany({
-    where: { isActive: true, role: { in: ["ADMIN", "ADJUSTER"] } },
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
-  });
+  const [adjusters, firmHistory] = await Promise.all([
+    prisma.adjuster.findMany({
+      where: { isActive: true, role: { in: ["ADMIN", "ADJUSTER"] } },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    loadFirmHistory(claim),
+  ]);
 
   const data: ClaimDetailData = {
     id: claim.id,
@@ -145,6 +152,8 @@ async function ClaimDetailDataLoader({
     settlementAmount: claim.settlementAmount?.toString() ?? null,
     settlementDate: isoDate(claim.settlementDate),
     settlementNotes: claim.settlementNotes,
+    settlementEstimate: coerceSettlementEstimate(claim.settlementEstimate),
+    firmHistory,
     isCatClaim: claim.isCatClaim,
     contingencyFeePercent: claim.contingencyFeePercent.toString(),
     assignedAdjusterId: claim.assignedAdjusterId,

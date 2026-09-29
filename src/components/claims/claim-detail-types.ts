@@ -12,6 +12,8 @@ import type {
 } from "@prisma/client";
 import type { CarrierExpertInput } from "@/lib/schemas/claim";
 import type { PolicyLimitRow } from "@/lib/policy-extraction";
+import type { SettlementEstimate } from "@/lib/claims/settlement-estimate";
+import type { FirmHistory } from "@/lib/claims/firm-history";
 
 export type ClaimPolicyDetail = {
   id: string;
@@ -70,6 +72,8 @@ export type ClaimDetailData = {
   settlementAmount: string | null;
   settlementDate: string | null;
   settlementNotes: string | null;
+  settlementEstimate: SettlementEstimate | null;
+  firmHistory: FirmHistory;
   isCatClaim: boolean;
   contingencyFeePercent: string;
   assignedAdjusterId: string | null;

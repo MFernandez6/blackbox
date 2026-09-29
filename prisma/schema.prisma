@@ -216,6 +216,9 @@ model Claim {
   settlementDate         DateTime?   @db.Date
   /// Notes on demand / settlement posture
   settlementNotes        String?     @db.Text
+  /// Claude settlement benchmark (county / state / national market data, not firm history)
+  settlementEstimate     Json?
+  settlementEstimateAt   DateTime?
   /// True when loss arises from a declared catastrophe / emergency event
   isCatClaim             Boolean     @default(false)
   /// Firm contingency: 20% standard, 10% when isCatClaim (FL PA fee cap on CAT)

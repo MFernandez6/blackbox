@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { logClaimAudit } from "@/lib/claims/audit";
 import { assertCanEditClaim } from "@/lib/claims/access";
+import { claudeConfigured } from "@/lib/ai/claude";
 import {
   isPolicyExtractionResult,
   limitsToLegacyHo,
@@ -107,7 +108,7 @@ export async function parsePolicyDocumentAction(
 
     const lineHint = hintLine ?? doc.policyLine ?? null;
 
-    if (process.env.ANTHROPIC_API_KEY) {
+    if (claudeConfigured()) {
       try {
         const { extractPolicyFromDocument } = await import("@/lib/policy-ai");
         const extracted = await extractPolicyFromDocument({

@@ -17,6 +17,7 @@ import {
 } from "@/lib/policy-extraction";
 import { POLICY_LINE_LABELS } from "@/lib/claims/labels";
 import { DocumentUploadDialog } from "@/components/claims/document-upload-dialog";
+import { AiFeatureBadge } from "@/components/claims/ai-feature-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -304,7 +305,10 @@ export function PolicyCoveragePanel({
     <section className="border border-brand-white/10 p-4 sm:p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="eyebrow">Coverage Protocol</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="eyebrow">Coverage Protocol</p>
+            <AiFeatureBadge />
+          </div>
           <p className="mt-1 text-sm text-brand-slate">
             Parse homeowners, condo master, CGL, umbrella, flood, and other
             product lines into separate policy records on this file.

@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import type { PolicyLine } from "@prisma/client";
 import {
   type PolicyExtractionResult,
@@ -6,22 +6,10 @@ import {
   coercePolicyLine,
 } from "@/lib/policy-extraction";
 import { readStoredDocumentBytes } from "@/lib/storage";
+import { claudeClient, parseJsonText, resolveModel } from "@/lib/ai/claude";
 
-/** Live Anthropic model for policy PDF extraction (retired IDs must not be used). */
+/** Policy money fields need the stronger model; override with ANTHROPIC_POLICY_MODEL. */
 const DEFAULT_POLICY_MODEL = "claude-sonnet-4-6";
-const RETIRED_POLICY_MODELS = new Set([
-  "claude-sonnet-4-20250514",
-  "claude-sonnet-4-0",
-  "claude-opus-4-20250514",
-]);
-
-function resolvePolicyModel(): string {
-  const raw = (process.env.ANTHROPIC_POLICY_MODEL || "").trim();
-  if (!raw || RETIRED_POLICY_MODELS.has(raw) || raw === "[SENSITIVE]") {
-    return DEFAULT_POLICY_MODEL;
-  }
-  return raw;
-}
 
 const POLICY_LINES =
   "HOMEOWNERS | CONDO_MASTER | COMMERCIAL_PROPERTY | CGL | UMBRELLA | EXCESS | FLOOD | AUTO | WORKERS_COMP | OTHER";
@@ -75,10 +63,7 @@ Rules:
 - If the document is only an ACORD certificate, still extract policy numbers, carriers, terms, and any stated limits/TIV from the remarks.`;
 
 function parseJsonPayload(text: string): PolicyExtractionResult {
-  const trimmed = text.trim();
-  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const raw = fence ? fence[1].trim() : trimmed;
-  const parsed = JSON.parse(raw) as PolicyExtractionResult;
+  const parsed = parseJsonText<PolicyExtractionResult>(text);
   parsed.limits = normalizeExtractionLimits(parsed);
   return parsed;
 }
@@ -92,18 +77,11 @@ export async function extractPolicyFromDocument(opts: {
   fileName: string;
   hintLine?: PolicyLine | null;
 }): Promise<PolicyExtractionResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "ANTHROPIC_API_KEY is not set. Add it to .env / Vercel to enable policy AI extraction."
-    );
-  }
-
-  const client = new Anthropic({ apiKey });
+  const client = claudeClient("policy AI extraction");
   const bytes = await readStoredDocumentBytes(opts.fileUrl);
   const base64 = bytes.toString("base64");
   const mime = opts.mimeType || "application/pdf";
-  const model = resolvePolicyModel();
+  const model = resolveModel("ANTHROPIC_POLICY_MODEL", DEFAULT_POLICY_MODEL);
 
   const content: Anthropic.MessageCreateParams["messages"][0]["content"] = [];
 
