@@ -83,7 +83,7 @@ export function TasksTab({ claim, adjusters, editable }: ClaimWorkspaceProps) {
         <ErrorBanner message={error} onDismiss={() => setError("")} />
       ) : null}
 
-      <section className="border border-brand-white/10 p-4 sm:p-5">
+      <section className="border border-brand-gold/15 p-4 sm:p-5 rounded-2xl">
         <p className="eyebrow mb-4">Tasks</p>
         {claim.tasks.length === 0 ? (
           <p className="mb-4 text-sm text-brand-slate">No tasks on file</p>
@@ -92,7 +92,7 @@ export function TasksTab({ claim, adjusters, editable }: ClaimWorkspaceProps) {
             {claim.tasks.map((t) => (
               <div
                 key={t.id}
-                className="flex flex-wrap items-start justify-between gap-3 border border-brand-white/10 p-3"
+                className="flex flex-wrap items-start justify-between gap-3 border border-brand-gold/15 p-3 rounded-2xl"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-brand-white">{t.title}</p>

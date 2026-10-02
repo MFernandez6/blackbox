@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
 
 const config: Config = {
   darkMode: ["class"],
@@ -18,14 +19,14 @@ const config: Config = {
     extend: {
       borderRadius: {
         none: "0",
-        sm: "0",
-        DEFAULT: "0",
-        md: "0",
-        lg: "0",
-        xl: "0",
-        "2xl": "0",
-        "3xl": "0",
-        full: "0",
+        sm: "2px",
+        DEFAULT: "4px",
+        md: "4px",
+        lg: "4px",
+        xl: "6px",
+        "2xl": "8px",
+        "3xl": "10px",
+        full: "9999px",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
@@ -68,20 +69,21 @@ const config: Config = {
         },
         /* Blackline brand aliases (match public-adjuster-v2) */
         brand: {
-          navy: "#0F1C2E",
-          "navy-deep": "#020617",
-          gold: "#C6A85B",
-          white: "#F4F4F4",
-          slate: "#8B95A5",
+          tile: "rgb(var(--brand-tile) / <alpha-value>)",
+          navy: "rgb(var(--brand-navy) / <alpha-value>)",
+          "navy-deep": "rgb(var(--brand-navy-deep) / <alpha-value>)",
+          gold: "rgb(var(--brand-gold) / <alpha-value>)",
+          white: "rgb(var(--brand-white) / <alpha-value>)",
+          slate: "rgb(var(--brand-slate) / <alpha-value>)",
         },
         /* Legacy aliases used across the app */
         ink: "#0F1C2E",
         paper: "#F4F4F4",
-        hairline: "rgba(244, 244, 244, 0.12)",
+        hairline: "rgb(var(--brand-white) / 0.12)",
         denied: {
-          DEFAULT: "#E89090",
-          soft: "#F5C4C4",
-          muted: "rgba(232, 144, 144, 0.12)",
+          DEFAULT: "rgb(var(--denied) / <alpha-value>)",
+          soft: "rgb(var(--denied-soft) / <alpha-value>)",
+          muted: "rgb(var(--denied) / 0.12)",
         },
       },
       boxShadow: {
@@ -92,20 +94,29 @@ const config: Config = {
         lg: "none",
         xl: "none",
         "2xl": "none",
-        gold: "0 0 24px rgba(198, 168, 91, 0.08)",
+        gold: "none",
       },
       keyframes: {
         "fade-in": {
           from: { opacity: "0" },
           to: { opacity: "1" },
         },
+        "fade-up": {
+          from: { opacity: "0", transform: "translateY(8px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "fade-in": "fade-in 0.25s ease-out",
+        "fade-up": "fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1)",
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"),
+    plugin(({ addVariant }) => {
+      addVariant("light", '[data-theme="light"] &');
+    }),
+  ],
 };
 
 export default config;

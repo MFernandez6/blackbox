@@ -273,7 +273,7 @@ export function DashboardClient({
       </div>
 
       {/* Summary strip */}
-      <div className="grid gap-0 border border-brand-white/10 md:grid-cols-3">
+      <div className="grid gap-0 border border-brand-gold/15 md:grid-cols-3 rounded-2xl">
         <div className="border-b border-brand-white/10 px-5 py-4 md:border-b-0 md:border-r">
           <p className="eyebrow">Open Pipeline</p>
           <p className="mt-2 font-mono text-2xl text-brand-white">{summary.openCount}</p>
@@ -298,7 +298,7 @@ export function DashboardClient({
       </div>
 
       {/* Filters */}
-      <div className="space-y-4 border border-brand-white/10 p-4">
+      <div className="space-y-4 border border-brand-gold/15 p-4 rounded-2xl">
         <p className="eyebrow">File Integrity — Filters</p>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2">
@@ -394,7 +394,7 @@ export function DashboardClient({
       </div>
 
       {canEditClaims && someSelected ? (
-        <div className="no-print flex flex-wrap items-center gap-3 border border-brand-gold/30 bg-brand-gold/5 px-4 py-3">
+        <div className="no-print flex flex-wrap items-center gap-3 rounded-2xl border border-brand-gold/30 bg-brand-gold/5 px-4 py-3">
           <p className="eyebrow text-brand-gold">
             {selected.size} selected
           </p>
@@ -445,7 +445,7 @@ export function DashboardClient({
       {/* Claims list — mobile cards + desktop table */}
       <div className={cn((pending || busy) && "opacity-60")}>
         {claims.length === 0 ? (
-          <div className="border border-brand-white/10 px-6 py-16 text-center">
+          <div className="border border-brand-gold/15 px-6 py-16 text-center rounded-2xl">
             <p className="eyebrow mb-3">Secure Record</p>
             <p className="text-sm text-brand-slate">
               No active files. Accepted BLACKGATE intakes appear here after they
@@ -457,7 +457,7 @@ export function DashboardClient({
             {/* Mobile / tablet: vertical collapsible cards */}
             <div className="space-y-2 lg:hidden">
               {canEditClaims ? (
-                <div className="flex items-center gap-3 border border-brand-white/10 px-3 py-2">
+                <div className="flex items-center gap-3 border border-brand-gold/15 px-3 py-2 rounded-2xl">
                   <Checkbox
                     checked={allSelected}
                     onCheckedChange={(c) => toggleAll(!!c)}
@@ -474,7 +474,7 @@ export function DashboardClient({
                   return (
                     <li
                       key={c.id}
-                      className="border border-brand-white/10 bg-brand-navy-deep/30"
+                      className="border border-brand-gold/15 bg-brand-navy/40 rounded-2xl"
                     >
                       <div className="flex items-start gap-2 px-3 py-3">
                         {canEditClaims ? (
@@ -600,10 +600,10 @@ export function DashboardClient({
             </div>
 
             {/* Desktop table */}
-            <div className="hidden overflow-x-auto border border-brand-white/10 lg:block">
+            <div className="hidden overflow-x-auto border border-brand-gold/15 lg:block rounded-2xl">
               <table className="w-full min-w-[1100px] border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-brand-white/10 bg-brand-navy-deep/50">
+                  <tr className="border-b border-brand-white/10 bg-brand-navy/60">
                     {canEditClaims ? (
                       <th className="w-10 px-3 py-2.5 text-left align-middle">
                         <Checkbox

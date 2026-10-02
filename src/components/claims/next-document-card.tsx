@@ -48,7 +48,7 @@ export function NextDocumentCard({
       : null;
 
   return (
-    <div className="border border-brand-white/10">
+    <div className="border border-brand-gold/15 rounded-2xl">
       <div className="flex flex-wrap items-end justify-between gap-4 px-5 py-4">
         <div className="min-w-0">
           <p className="eyebrow">

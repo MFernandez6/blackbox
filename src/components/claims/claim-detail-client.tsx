@@ -314,7 +314,7 @@ export function ClaimDetailClient({
       </div>
 
       {claim.sourceProduct === "BLACKGATE" && claim.sourceIntakeId ? (
-        <div className="border border-brand-white/10 px-4 py-3">
+        <div className="border border-brand-gold/15 px-4 py-3 rounded-2xl">
           <p className="eyebrow">BLACKGATE</p>
           <p className="mt-2 text-sm text-brand-white/80">
             Opened from intake {claim.sourceIntakeNumber ?? claim.sourceIntakeId}.

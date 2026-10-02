@@ -27,7 +27,7 @@ export function FirmHistoryPanel({
       : null;
 
   return (
-    <section className="border border-brand-white/10 p-4 sm:p-5">
+    <section className="border border-brand-gold/15 p-4 sm:p-5 rounded-2xl">
       <div className="mb-4">
         <div className="flex flex-wrap items-center gap-2">
           <p className="eyebrow">Blackline History</p>
@@ -42,7 +42,7 @@ export function FirmHistoryPanel({
 
       {projection && split ? (
         <div className="mb-5 grid gap-3 sm:grid-cols-3">
-          <div className="border border-brand-gold/40 p-3">
+          <div className="rounded-2xl border border-brand-gold/40 p-3">
             <p className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
               Projected from history
             </p>
@@ -53,7 +53,7 @@ export function FirmHistoryPanel({
               {projection.method} · {projection.groupLabel} ({projection.sample} files)
             </p>
           </div>
-          <div className="border border-brand-white/10 p-3">
+          <div className="border border-brand-gold/15 p-3 rounded-2xl">
             <dl className="space-y-1 text-xs">
               <div className="flex justify-between gap-2">
                 <dt className="text-brand-slate">
@@ -67,7 +67,7 @@ export function FirmHistoryPanel({
               </div>
             </dl>
           </div>
-          <div className="border border-brand-white/10 p-3">
+          <div className="border border-brand-gold/15 p-3 rounded-2xl">
             <p className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
               Vs. market likely
             </p>

@@ -302,7 +302,7 @@ export function PolicyCoveragePanel({
   }
 
   return (
-    <section className="border border-brand-white/10 p-4 sm:p-5">
+    <section className="border border-brand-gold/15 p-4 sm:p-5 rounded-2xl">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -345,7 +345,7 @@ export function PolicyCoveragePanel({
         />
       ) : null}
 
-      <div className="mb-5 space-y-3 border border-brand-white/10 bg-brand-navy-deep/40 px-4 py-3">
+      <div className="mb-5 space-y-3 border border-brand-gold/15 bg-brand-navy/40 px-4 py-3 rounded-2xl">
         <p className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
           Policy documents on file
         </p>
@@ -483,7 +483,7 @@ export function PolicyCoveragePanel({
             return (
               <div
                 key={p.id}
-                className="border border-brand-white/10 bg-brand-navy/30"
+                className="border border-brand-gold/15 bg-brand-navy/30 rounded-2xl"
               >
                 <button
                   type="button"

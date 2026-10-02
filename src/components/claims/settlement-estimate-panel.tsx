@@ -66,7 +66,7 @@ export function SettlementEstimatePanel({
   };
 
   return (
-    <section className="border border-brand-white/10 p-4 sm:p-5">
+    <section className="border border-brand-gold/15 p-4 sm:p-5 rounded-2xl">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -123,8 +123,8 @@ export function SettlementEstimatePanel({
                   key={tier.key}
                   className={
                     likely
-                      ? "border border-brand-gold/40 p-3"
-                      : "border border-brand-white/10 p-3"
+                      ? "rounded-2xl border border-brand-gold/40 p-3"
+                      : "border border-brand-gold/15 p-3 rounded-2xl"
                   }
                 >
                   <p className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">

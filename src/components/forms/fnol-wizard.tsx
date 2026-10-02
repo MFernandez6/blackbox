@@ -171,7 +171,7 @@ export function FnolWizard() {
 
   if (!hydrated) {
     return (
-      <div className="border border-brand-white/10 p-8">
+      <div className="border border-brand-gold/15 p-8 rounded-2xl">
         <p className="eyebrow">Evidence Protocol</p>
         <p className="mt-2 text-sm text-brand-slate">Loading draft…</p>
       </div>
@@ -209,7 +209,7 @@ export function FnolWizard() {
       {step === 0 && (
         <div className="space-y-6">
           {fields.map((field, index) => (
-            <div key={field.id} className="space-y-4 border border-brand-white/10 p-5">
+            <div key={field.id} className="space-y-4 border border-brand-gold/15 p-5 rounded-2xl">
               <div className="flex items-center justify-between">
                 <p className="eyebrow">Claimant {String(index + 1).padStart(2, "0")}</p>
                 {fields.length > 1 ? (
@@ -310,7 +310,7 @@ export function FnolWizard() {
       )}
 
       {step === 1 && (
-        <div className="space-y-4 border border-brand-white/10 p-5">
+        <div className="space-y-4 border border-brand-gold/15 p-5 rounded-2xl">
           <Field label="Property Address" required error={form.formState.errors.property?.propertyAddress?.message}>
             <Input {...form.register("property.propertyAddress")} />
           </Field>
@@ -378,7 +378,7 @@ export function FnolWizard() {
       )}
 
       {step === 2 && (
-        <div className="space-y-6 border border-brand-white/10 p-5">
+        <div className="space-y-6 border border-brand-gold/15 p-5 rounded-2xl">
           <p className="text-sm text-brand-slate">
             Policy and carrier fields may be left blank when unknown at first contact.
           </p>
@@ -565,7 +565,7 @@ function ReviewBlock({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border border-brand-white/10 p-5">
+    <div className="border border-brand-gold/15 p-5 rounded-2xl">
       <p className="eyebrow mb-3">{title}</p>
       {children}
     </div>

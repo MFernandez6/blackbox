@@ -54,7 +54,7 @@ export function ActivityTab({ claim, editable }: ClaimWorkspaceProps) {
       ) : null}
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <section className="border border-brand-white/10 p-4 sm:p-5">
+        <section className="border border-brand-gold/15 p-4 sm:p-5 rounded-2xl">
           <p className="eyebrow mb-4">Notes</p>
           {claim.notes.length === 0 ? (
             <p className="mb-4 text-sm text-brand-slate">No notes on file</p>
@@ -63,7 +63,7 @@ export function ActivityTab({ claim, editable }: ClaimWorkspaceProps) {
               {claim.notes.map((n) => (
                 <li
                   key={n.id}
-                  className="border border-brand-white/10 p-3"
+                  className="border border-brand-gold/15 p-3 rounded-2xl"
                 >
                   <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                     {format(new Date(n.createdAt), "yyyy-MM-dd HH:mm")} ·{" "}
@@ -103,7 +103,7 @@ export function ActivityTab({ claim, editable }: ClaimWorkspaceProps) {
           ) : null}
         </section>
 
-        <section className="border border-brand-white/10 p-4 sm:p-5">
+        <section className="border border-brand-gold/15 p-4 sm:p-5 rounded-2xl">
           <p className="eyebrow mb-4">History</p>
           <p className="mb-4 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
             Chain of custody: unbroken
@@ -114,7 +114,7 @@ export function ActivityTab({ claim, editable }: ClaimWorkspaceProps) {
                 key={e.id}
                 className="relative border-l border-brand-white/10 pb-6 pl-4 last:pb-0"
               >
-                <span className="absolute -left-[3px] top-1 h-1.5 w-1.5 bg-brand-gold" />
+                <span className="absolute -left-[3px] top-1 h-1.5 w-1.5 rounded-full bg-brand-gold" />
                 <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                   {format(new Date(e.createdAt), "yyyy-MM-dd HH:mm")} · Audit
                 </p>
@@ -129,7 +129,7 @@ export function ActivityTab({ claim, editable }: ClaimWorkspaceProps) {
                 key={h.id}
                 className="relative border-l border-brand-white/10 pb-6 pl-4 last:pb-0"
               >
-                <span className="absolute -left-[3px] top-1 h-1.5 w-1.5 bg-brand-gold" />
+                <span className="absolute -left-[3px] top-1 h-1.5 w-1.5 rounded-full bg-brand-gold" />
                 <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                   {format(new Date(h.changedAt), "yyyy-MM-dd HH:mm")} · Status
                 </p>

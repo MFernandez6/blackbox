@@ -79,7 +79,7 @@ export function EmailsTab({ claim, editable }: ClaimWorkspaceProps) {
         <ErrorBanner message={error} onDismiss={() => setError("")} />
       ) : null}
 
-      <section className="border border-brand-white/10 p-4 sm:p-5">
+      <section className="border border-brand-gold/15 p-4 sm:p-5 rounded-2xl">
         <p className="eyebrow mb-4">Email Correspondence</p>
         {claim.emails.length === 0 ? (
           <p className="mb-4 text-sm text-brand-slate">No emails logged</p>
@@ -88,7 +88,7 @@ export function EmailsTab({ claim, editable }: ClaimWorkspaceProps) {
             {claim.emails.map((e) => (
               <div
                 key={e.id}
-                className="border border-brand-white/10 p-4"
+                className="border border-brand-gold/15 p-4 rounded-2xl"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">

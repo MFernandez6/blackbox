@@ -142,7 +142,7 @@ export function DashboardMyWork({
       <div className="space-y-2 lg:hidden">
         <ul className="space-y-2">
           {rows.map((row) => (
-            <li key={row.key} className="border border-brand-white/10 bg-brand-navy-deep/30">
+            <li key={row.key} className="border border-brand-gold/15 bg-brand-navy/40 rounded-2xl">
               <Link href={row.href} className="block px-3 py-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -170,10 +170,10 @@ export function DashboardMyWork({
         </ul>
       </div>
 
-      <div className="hidden overflow-x-auto border border-brand-white/10 lg:block">
+      <div className="hidden overflow-x-auto border border-brand-gold/15 lg:block rounded-2xl">
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-brand-white/10 bg-brand-navy-deep/50">
+            <tr className="border-b border-brand-white/10 bg-brand-navy/60">
               <th className="px-3 py-2.5 text-left font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                 Queue
               </th>

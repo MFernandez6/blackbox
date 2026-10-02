@@ -101,7 +101,7 @@ export function DemandSettlementTab({
         <ErrorBanner message={error} onDismiss={() => setError("")} />
       ) : null}
 
-      <section className="border border-brand-white/10 p-4 sm:p-5">
+      <section className="border border-brand-gold/15 p-4 sm:p-5 rounded-2xl">
         <p className="eyebrow mb-4">Demand Package</p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <ClaimField label="Demand Amount">
@@ -139,7 +139,7 @@ export function DemandSettlementTab({
         </div>
       </section>
 
-      <section className="border border-brand-white/10 p-4 sm:p-5">
+      <section className="border border-brand-gold/15 p-4 sm:p-5 rounded-2xl">
         <p className="eyebrow mb-4">Settlement Tracking</p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <ClaimField label="Settlement Amount">
@@ -174,7 +174,7 @@ export function DemandSettlementTab({
         ) : null}
       </section>
 
-      <section className="border border-brand-white/10 p-4 sm:p-5">
+      <section className="border border-brand-gold/15 p-4 sm:p-5 rounded-2xl">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <p className="eyebrow">Fee Calc Summary</p>
           <Button asChild size="sm" variant="outline">
@@ -240,7 +240,7 @@ export function DemandSettlementTab({
       {paymentsOk ? (
         <PaymentPanel claimId={claim.id} payments={claim.payments} />
       ) : (
-        <section className="border border-brand-white/10 p-4 sm:p-5">
+        <section className="border border-brand-gold/15 p-4 sm:p-5 rounded-2xl">
           <p className="eyebrow mb-4">Payment Log</p>
           <p className="text-sm text-brand-slate">
             Payment entries are restricted to administrators. Fee figures above
@@ -280,7 +280,7 @@ function SummaryStat({
   hint?: string;
 }) {
   return (
-    <div className="border border-brand-white/10 p-3">
+    <div className="border border-brand-gold/15 p-3 rounded-2xl">
       <dt className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
         {label}
       </dt>
@@ -326,7 +326,7 @@ function PaymentPanel({
   }
 
   return (
-    <section className="border border-brand-white/10 p-4 sm:p-5">
+    <section className="border border-brand-gold/15 p-4 sm:p-5 rounded-2xl">
       <p className="eyebrow mb-4">Payment Log — Admin</p>
       {error ? (
         <ErrorBanner message={error} onDismiss={() => setError("")} className="mb-4" />

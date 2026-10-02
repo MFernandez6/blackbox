@@ -410,7 +410,7 @@ export function DocumentsVaultClient({
         </div>
       )}
 
-      <div className="space-y-4 border border-brand-white/10 p-4">
+      <div className="space-y-4 border border-brand-gold/15 p-4 rounded-2xl">
         <p className="eyebrow">Filter by Type</p>
         <div className="flex flex-wrap gap-2">
           <button
@@ -493,7 +493,7 @@ export function DocumentsVaultClient({
       </div>
 
       {inspectionDocs.length === 0 && officeDocs.length === 0 ? (
-        <div className="border border-brand-white/10 px-6 py-16 text-center">
+        <div className="border border-brand-gold/15 px-6 py-16 text-center rounded-2xl">
           <p className="eyebrow mb-2">Secure Record</p>
           <p className="text-sm text-brand-slate">No documents on file</p>
         </div>
@@ -528,7 +528,7 @@ export function DocumentsVaultClient({
                               key={d.id}
                               type="button"
                               onClick={() => setPreviewDoc(d)}
-                              className="border border-brand-white/10 bg-brand-navy-deep/40 text-left hover:border-brand-gold/40"
+                              className="border border-brand-gold/15 bg-brand-navy/40 text-left hover:border-brand-gold/40 rounded-2xl"
                             >
                               <div className="aspect-[4/3] overflow-hidden bg-black/40">
                                 {isImage(d.mimeType) ? (
@@ -573,9 +573,9 @@ export function DocumentsVaultClient({
                   </p>
                 </div>
               ) : null}
-              <div className="border border-brand-white/10 overflow-x-auto">
+              <div className="border border-brand-gold/15 overflow-x-auto rounded-2xl">
           <table className="w-full text-sm">
-            <thead className="border-b border-brand-white/10 bg-brand-navy-deep/50">
+            <thead className="border-b border-brand-white/10 bg-brand-navy/60">
               <tr>
                 <th className="w-12 px-2 py-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
                   Fmt
@@ -810,7 +810,7 @@ export function DocumentsVaultClient({
                     className="h-[60vh] w-full border border-brand-white/10 bg-white"
                   />
                 ) : (
-                  <div className="space-y-3 border border-brand-white/10 p-4">
+                  <div className="space-y-3 border border-brand-gold/15 p-4 rounded-2xl">
                     <p className="text-sm text-brand-slate">
                       Preview not available for this file type.
                     </p>
