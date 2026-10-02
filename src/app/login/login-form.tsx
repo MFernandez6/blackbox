@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { BlackboxMark } from "@/components/brand/blackbox-mark";
+import { BlacklineLogo } from "@/components/brand/blackline-mark";
 
 type LoginValues = z.infer<typeof loginSchema>;
 
@@ -68,13 +69,11 @@ export default function LoginForm() {
         </div>
 
         {/* Firm attribution — secondary, clearly separate */}
-        <div className="mb-8 border border-brand-white/10 bg-brand-navy-deep/40 px-4 py-3 text-center">
+        <div className="mb-8 border border-brand-white/10 bg-brand-navy-deep/40 px-4 py-5 text-center">
           <p className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-brand-slate">
             Operated for
           </p>
-          <p className="mt-1.5 font-serif text-xs font-semibold tracking-[0.14em] text-brand-white/85">
-            BLACKLINE PUBLIC ADJUSTERS LLC
-          </p>
+          <BlacklineLogo className="mx-auto mt-4 w-44" priority />
         </div>
 
         <div className="hairline mb-8" />

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { BlackboxMark } from "@/components/brand/blackbox-mark";
 import { IdleSessionGuard } from "@/components/layout/idle-session-guard";
+import { BlacklineMark } from "@/components/brand/blackline-mark";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -23,7 +24,8 @@ export function AppShell({ children, user }: AppShellProps) {
       <header className="no-print sticky top-0 z-50 border-b border-brand-white/5 bg-brand-navy/95 backdrop-blur-md">
         <div className="mx-auto flex h-20 max-w-[1400px] min-w-0 items-center justify-between gap-4 px-4 sm:gap-6 sm:px-6">
           <div className="flex min-w-0 items-center gap-6 sm:gap-10">
-            <Link href="/dashboard" className="group shrink-0">
+            <Link href="/dashboard" className="group flex shrink-0 items-center gap-3">
+              <BlacklineMark size={30} className="hidden sm:block" />
               <div className="flex flex-col leading-none">
                 <BlackboxMark className="font-serif text-xl font-bold tracking-[0.2em] text-brand-gold sm:text-2xl" />
                 <span className="mt-1.5 font-sans text-[9px] font-bold uppercase tracking-[0.18em] text-brand-slate">
