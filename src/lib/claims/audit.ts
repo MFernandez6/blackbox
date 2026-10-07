@@ -12,7 +12,9 @@ export type AuditAction =
   | "POLICY_RECORD_UPDATE"
   | "POLICY_RECORD_DELETE"
   | "POLICY_RECORD_CREATE"
-  | "SETTLEMENT_ESTIMATE";
+  | "SETTLEMENT_ESTIMATE"
+  | "PERSON_LINK"
+  | "PERSON_UNLINK";
 
 export async function logClaimAudit(opts: {
   claimId: string;

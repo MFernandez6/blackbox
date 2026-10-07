@@ -79,6 +79,7 @@ export const claimEmailCreateSchema = z.object({
   ccAddress: z.string().optional().nullable(),
   body: z.string().min(1, "Body is required"),
   emailDate: z.string().min(1, "Email date is required"),
+  signatoryId: z.enum(["miguel", "rosie"]).optional(),
 });
 
 export type ClaimDatesUpdateInput = z.infer<typeof claimDatesUpdateSchema>;

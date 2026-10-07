@@ -2,6 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { assertCanEditClaim } from "@/lib/claims/access";
+import {
+  appendEmailSignature,
+  resolveOutboundSignatory,
+} from "@/lib/email/signatures";
 import { prisma } from "@/lib/prisma";
 import {
   claimDatesUpdateSchema,
@@ -335,15 +339,28 @@ export async function createClaimEmailAction(
       return { ok: false, error: gate.error ?? "Unauthorized." };
     }
 
+    const signatory =
+      parsed.data.direction === "OUTBOUND"
+        ? resolveOutboundSignatory({
+            body: parsed.data.body,
+            fromAddress: parsed.data.fromAddress,
+            signatoryId: parsed.data.signatoryId,
+          })
+        : null;
+    const fromAddress = signatory?.email ?? parsed.data.fromAddress;
+    const body = signatory
+      ? appendEmailSignature(parsed.data.body, signatory)
+      : parsed.data.body;
+
     const row = await prisma.claimEmail.create({
       data: {
         claimId: parsed.data.claimId,
         direction: parsed.data.direction,
         subject: parsed.data.subject,
-        fromAddress: parsed.data.fromAddress,
+        fromAddress,
         toAddress: parsed.data.toAddress,
         ccAddress: parsed.data.ccAddress || null,
-        body: parsed.data.body,
+        body,
         emailDate: new Date(parsed.data.emailDate),
         createdById: gate.session.user.id,
       },

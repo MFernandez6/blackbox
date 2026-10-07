@@ -16,7 +16,10 @@ type AppShellProps = {
 export function AppShell({ children, user }: AppShellProps) {
   const pathname = usePathname();
 
-  const nav = [{ href: "/dashboard", label: "Files" }];
+  const nav = [
+    { href: "/dashboard", label: "Files" },
+    { href: "/people", label: "People" },
+  ];
 
   return (
     <div className="min-h-screen text-brand-white">

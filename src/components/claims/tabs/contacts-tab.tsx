@@ -3,19 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import type { ContactKind, PreferredContactMethod } from "@prisma/client";
-import { CONTACT_KIND_LABELS, CONTACT_METHOD_LABELS } from "@/lib/claims/labels";
+import type { PreferredContactMethod } from "@prisma/client";
+import { CONTACT_METHOD_LABELS } from "@/lib/claims/labels";
 import { updateClaimDetailAction, updateClaimantsAction } from "@/lib/actions/claims";
-import {
-  createClaimContactAction,
-  deleteClaimContactAction,
-} from "@/lib/actions/claim-workspace";
 import type { CarrierExpertInput, ClaimDetailUpdateInput } from "@/lib/schemas/claim";
 import type { ClaimWorkspaceProps } from "@/components/claims/claim-detail-types";
 import { ClaimField } from "@/components/claims/claim-field";
+import { ClaimPeopleSection } from "@/components/claims/claim-people-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import {
@@ -101,13 +97,6 @@ export function ContactsTab({ claim, editable }: ClaimWorkspaceProps) {
     claim.experts.length ? claim.experts : []
   );
 
-  const [vendorKind, setVendorKind] = useState<ContactKind>("VENDOR");
-  const [vendorName, setVendorName] = useState("");
-  const [vendorCompany, setVendorCompany] = useState("");
-  const [vendorPhone, setVendorPhone] = useState("");
-  const [vendorEmail, setVendorEmail] = useState("");
-  const [vendorNotes, setVendorNotes] = useState("");
-
   async function saveClaimants() {
     setError("");
     const result = await updateClaimantsAction(claim.id, claimants);
@@ -130,42 +119,6 @@ export function ContactsTab({ claim, editable }: ClaimWorkspaceProps) {
       return;
     }
     toast.success("Carrier contacts updated");
-    router.refresh();
-  }
-
-  async function addVendor() {
-    setError("");
-    const result = await createClaimContactAction({
-      claimId: claim.id,
-      kind: vendorKind,
-      name: vendorName,
-      company: vendorCompany || null,
-      phone: vendorPhone || null,
-      email: vendorEmail || null,
-      notes: vendorNotes || null,
-    });
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
-    toast.success("Contact added");
-    setVendorName("");
-    setVendorCompany("");
-    setVendorPhone("");
-    setVendorEmail("");
-    setVendorNotes("");
-    router.refresh();
-  }
-
-  async function removeVendor(id: string) {
-    if (!confirm("Remove this contact from the file?")) return;
-    setError("");
-    const result = await deleteClaimContactAction(id);
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
-    toast.success("Contact removed");
     router.refresh();
   }
 
@@ -289,6 +242,8 @@ export function ContactsTab({ claim, editable }: ClaimWorkspaceProps) {
           </Button>
         ) : null}
       </section>
+
+      <ClaimPeopleSection claimId={claim.id} people={claim.people} editable={editable} />
 
       <section className="border border-brand-gold/15 p-4 sm:p-5 rounded-2xl">
         <p className="eyebrow mb-4">Carrier Contacts</p>
@@ -476,107 +431,6 @@ export function ContactsTab({ claim, editable }: ClaimWorkspaceProps) {
         ) : null}
       </section>
 
-      <section className="border border-brand-gold/15 p-4 sm:p-5 rounded-2xl">
-        <p className="eyebrow mb-4">Vendors & Third Parties</p>
-        {claim.contacts.length === 0 ? (
-          <p className="mb-4 text-sm text-brand-slate">No vendor contacts on file</p>
-        ) : (
-          <div className="mb-6 space-y-3">
-            {claim.contacts.map((c) => (
-              <div
-                key={c.id}
-                className="flex flex-wrap items-start justify-between gap-3 border border-brand-gold/15 p-3 rounded-2xl"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-brand-white">
-                    {c.name}
-                    {c.company ? (
-                      <span className="text-brand-slate"> · {c.company}</span>
-                    ) : null}
-                  </p>
-                  <p className="font-mono text-xs text-brand-slate">
-                    {CONTACT_KIND_LABELS[c.kind]}
-                    {c.phone ? ` · ${c.phone}` : ""}
-                    {c.email ? ` · ${c.email}` : ""}
-                  </p>
-                  {c.notes ? (
-                    <p className="mt-1 text-sm text-brand-white/80">{c.notes}</p>
-                  ) : null}
-                </div>
-                {editable ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => removeVendor(c.id)}
-                  >
-                    Remove
-                  </Button>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {editable ? (
-          <div className="space-y-3 border-t border-brand-white/10 pt-4">
-            <p className="font-sans text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold">
-              Add Contact
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <ClaimField label="Kind">
-                <Select
-                  value={vendorKind}
-                  onValueChange={(v) => setVendorKind(v as ContactKind)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(CONTACT_KIND_LABELS).map(([k, label]) => (
-                      <SelectItem key={k} value={k}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </ClaimField>
-              <ClaimField label="Name">
-                <Input
-                  value={vendorName}
-                  onChange={(e) => setVendorName(e.target.value)}
-                />
-              </ClaimField>
-              <ClaimField label="Company">
-                <Input
-                  value={vendorCompany}
-                  onChange={(e) => setVendorCompany(e.target.value)}
-                />
-              </ClaimField>
-              <ClaimField label="Phone">
-                <Input
-                  value={vendorPhone}
-                  onChange={(e) => setVendorPhone(e.target.value)}
-                />
-              </ClaimField>
-              <ClaimField label="Email">
-                <Input
-                  value={vendorEmail}
-                  onChange={(e) => setVendorEmail(e.target.value)}
-                />
-              </ClaimField>
-              <ClaimField label="Notes" className="sm:col-span-2">
-                <Textarea
-                  value={vendorNotes}
-                  onChange={(e) => setVendorNotes(e.target.value)}
-                />
-              </ClaimField>
-            </div>
-            <Button size="sm" variant="outline" onClick={addVendor}>
-              Add Contact
-            </Button>
-          </div>
-        ) : null}
-      </section>
     </div>
   );
 }

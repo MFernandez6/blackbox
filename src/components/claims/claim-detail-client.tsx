@@ -56,7 +56,7 @@ export type { ClaimDetailData } from "@/components/claims/claim-detail-types";
 
 const TABS = [
   { id: "overview", label: "Overview" },
-  { id: "contacts", label: "Contacts / Vendors" },
+  { id: "contacts", label: "Contacts / People" },
   { id: "tasks", label: "Tasks" },
   { id: "documents", label: "Documents Vault" },
   { id: "activity", label: "Activity" },

@@ -11,7 +11,15 @@ import {
   deleteClaimEmailAction,
 } from "@/lib/actions/claim-workspace";
 import type { ClaimWorkspaceProps } from "@/components/claims/claim-detail-types";
+import { EmailSignature } from "@/components/email/email-signature";
 import { ClaimField } from "@/components/claims/claim-field";
+import {
+  EMAIL_SIGNATORIES,
+  emailSignatoryById,
+  resolveOutboundSignatory,
+  stripEmailSignature,
+  type EmailSignatoryId,
+} from "@/lib/email/signatures";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,18 +42,29 @@ export function EmailsTab({ claim, editable }: ClaimWorkspaceProps) {
   const [ccAddress, setCcAddress] = useState("");
   const [body, setBody] = useState("");
   const [emailDate, setEmailDate] = useState("");
+  const [signatoryId, setSignatoryId] = useState<EmailSignatoryId>("miguel");
+  const signatory = emailSignatoryById(signatoryId);
 
   async function addEmail() {
     setError("");
+    const outbound = direction === "OUTBOUND";
+    const sender = outbound
+      ? resolveOutboundSignatory({
+          body,
+          fromAddress,
+          signatoryId,
+        })
+      : null;
     const result = await createClaimEmailAction({
       claimId: claim.id,
       direction,
       subject,
-      fromAddress,
+      fromAddress: sender?.email ?? fromAddress,
       toAddress,
       ccAddress: ccAddress || null,
       body,
       emailDate,
+      signatoryId: sender?.id,
     });
     if (!result.ok) {
       setError(result.error);
@@ -116,8 +135,18 @@ export function EmailsTab({ claim, editable }: ClaimWorkspaceProps) {
                   ) : null}
                 </div>
                 <p className="mt-3 whitespace-pre-wrap text-sm text-brand-white/90">
-                  {e.body}
+                  {e.direction === "OUTBOUND"
+                    ? stripEmailSignature(e.body).trim()
+                    : e.body}
                 </p>
+                {e.direction === "OUTBOUND" ? (
+                  <EmailSignature
+                    signatory={resolveOutboundSignatory({
+                      body: e.body,
+                      fromAddress: e.fromAddress,
+                    })}
+                  />
+                ) : null}
               </div>
             ))}
           </div>
@@ -159,10 +188,34 @@ export function EmailsTab({ claim, editable }: ClaimWorkspaceProps) {
                   onChange={(e) => setSubject(e.target.value)}
                 />
               </ClaimField>
+              {direction === "OUTBOUND" ? (
+                <ClaimField label="Signature" className="sm:col-span-2">
+                  <Select
+                    value={signatoryId}
+                    onValueChange={(v) => {
+                      const next = v as EmailSignatoryId;
+                      setSignatoryId(next);
+                      setFromAddress(emailSignatoryById(next).email);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EMAIL_SIGNATORIES.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name} — {s.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </ClaimField>
+              ) : null}
               <ClaimField label="From">
                 <Input
-                  value={fromAddress}
+                  value={direction === "OUTBOUND" ? signatory.email : fromAddress}
                   onChange={(e) => setFromAddress(e.target.value)}
+                  readOnly={direction === "OUTBOUND"}
                 />
               </ClaimField>
               <ClaimField label="To">
@@ -183,6 +236,9 @@ export function EmailsTab({ claim, editable }: ClaimWorkspaceProps) {
                   onChange={(e) => setBody(e.target.value)}
                   rows={6}
                 />
+                {direction === "OUTBOUND" ? (
+                  <EmailSignature signatory={signatory} />
+                ) : null}
               </ClaimField>
             </div>
             <Button size="sm" variant="outline" onClick={addEmail}>

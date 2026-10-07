@@ -46,8 +46,32 @@ export async function storeClaimDocument(opts: {
   bytes: Buffer;
   mimeType: string;
 }): Promise<StoredDocument> {
+  return storeObject({ folder: opts.claimId, ...opts });
+}
+
+/** Business card photo for a People directory entry. */
+export async function storePersonCard(opts: {
+  personId: string;
+  bytes: Buffer;
+  mimeType: string;
+}): Promise<StoredDocument> {
+  const ext = opts.mimeType === "image/png" ? "png" : "jpg";
+  return storeObject({
+    folder: `people/${opts.personId}`,
+    fileName: `card.${ext}`,
+    bytes: opts.bytes,
+    mimeType: opts.mimeType,
+  });
+}
+
+async function storeObject(opts: {
+  folder: string;
+  fileName: string;
+  bytes: Buffer;
+  mimeType: string;
+}): Promise<StoredDocument> {
   const safeName = opts.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const objectPath = `${opts.claimId}/${Date.now()}-${safeName}`;
+  const objectPath = `${opts.folder}/${Date.now()}-${safeName}`;
   const cfg = supabaseConfig();
 
   if (cfg) {
@@ -82,7 +106,7 @@ export async function storeClaimDocument(opts: {
     );
   }
 
-  const relDir = path.join("uploads", opts.claimId);
+  const relDir = path.join("uploads", opts.folder);
   const absDir = path.join(process.cwd(), "public", relDir);
   await mkdir(absDir, { recursive: true });
   const storedName = path.basename(objectPath);

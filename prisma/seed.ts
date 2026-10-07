@@ -15,6 +15,10 @@
 
 import { PrismaClient, ClaimStatus, LossType, PreferredContactMethod, DocType, PaymentType, AdjusterRole, ContactKind, TaskStatus, EmailDirection } from "@prisma/client";
 import { hash } from "bcryptjs";
+import {
+  appendEmailSignature,
+  emailSignatoryById,
+} from "../src/lib/email/signatures";
 
 const prisma = new PrismaClient();
 
@@ -814,7 +818,10 @@ async function main() {
             subject: `FNOL acknowledgment — ${number}`,
             fromAddress: "miguel.fernandez@blacklineadjusting.com",
             toAddress: "claims@citizens.example",
-            body: "Please confirm receipt of FNOL and assign desk examiner. Loss photos and mitigation invoice to follow.",
+            body: appendEmailSignature(
+              "Please confirm receipt of FNOL and assign desk examiner. Loss photos and mitigation invoice to follow.",
+              emailSignatoryById("miguel")
+            ),
             emailDate: daysAgo(10),
             createdById: createdById,
           },

@@ -51,6 +51,10 @@ async function ClaimDetailDataLoader({
         include: { recordedBy: { select: { name: true } } },
       },
       contacts: { orderBy: { createdAt: "desc" } },
+      people: {
+        orderBy: { createdAt: "asc" },
+        include: { person: true },
+      },
       tasks: {
         orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }],
         include: {
@@ -234,6 +238,21 @@ async function ClaimDetailDataLoader({
       phone: c.phone,
       email: c.email,
       notes: c.notes,
+    })),
+    people: claim.people.map(({ id: linkId, roleOnFile, person: p }) => ({
+      linkId,
+      roleOnFile,
+      id: p.id,
+      name: p.name,
+      title: p.title,
+      company: p.company,
+      role: p.role,
+      mobilePhone: p.mobilePhone,
+      officePhone: p.officePhone,
+      email: p.email,
+      languages: p.languages,
+      temperament: p.temperament,
+      preferredContactMethod: p.preferredContactMethod,
     })),
     tasks: claim.tasks.map((t) => ({
       id: t.id,

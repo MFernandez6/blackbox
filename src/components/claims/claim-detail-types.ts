@@ -14,6 +14,7 @@ import type { CarrierExpertInput } from "@/lib/schemas/claim";
 import type { PolicyLimitRow } from "@/lib/policy-extraction";
 import type { SettlementEstimate } from "@/lib/claims/settlement-estimate";
 import type { FirmHistory } from "@/lib/claims/firm-history";
+import type { PersonSummary } from "@/components/people/types";
 
 export type ClaimPolicyDetail = {
   id: string;
@@ -145,6 +146,13 @@ export type ClaimDetailData = {
     email: string | null;
     notes: string | null;
   }>;
+  people: Array<
+    PersonSummary & {
+      linkId: string;
+      roleOnFile: string | null;
+      preferredContactMethod: PreferredContactMethod | null;
+    }
+  >;
   tasks: Array<{
     id: string;
     title: string;

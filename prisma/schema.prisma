@@ -101,6 +101,24 @@ enum ContactKind {
   OTHER
 }
 
+/// Who a directory person is in the claims world (People directory)
+enum PersonRole {
+  PROPERTY_MANAGER
+  ASSOCIATION_BOARD
+  PUBLIC_ADJUSTER
+  CARRIER_ADJUSTER
+  INDEPENDENT_ADJUSTER
+  CONTRACTOR
+  MITIGATION
+  ENGINEER
+  ATTORNEY
+  APPRAISER
+  UMPIRE
+  INSURANCE_AGENT
+  VENDOR
+  OTHER
+}
+
 enum TaskStatus {
   OPEN
   IN_PROGRESS
@@ -152,6 +170,9 @@ model Adjuster {
   contactsAdded  ClaimContact[]  @relation("ContactCreator")
   auditEvents    ClaimAuditEvent[] @relation("AuditActor")
   vaultUploads   DocumentVaultEntry[] @relation("VaultUploader")
+  peopleCreated  Person[]          @relation("PersonCreator")
+  peopleUpdated  Person[]          @relation("PersonUpdater")
+  peopleLinked   ClaimPerson[]     @relation("ClaimPersonLinker")
 }
 
 // ---------------------------------------------------------------------------
@@ -247,6 +268,7 @@ model Claim {
   statusHistory    StatusHistory[]
   payments         Payment[]
   contacts         ClaimContact[]
+  people           ClaimPerson[]
   tasks            ClaimTask[]
   notes            ClaimNote[]
   emails           ClaimEmail[]
@@ -412,6 +434,65 @@ model ClaimContact {
 
   @@index([claimId])
   @@index([kind])
+}
+
+// ---------------------------------------------------------------------------
+// Person — firm-wide directory of property managers, PAs, contractors,
+// carrier adjusters, etc. Shared with the whole team and linked to claims
+// through ClaimPerson. Temperament / notes are business records — keep them
+// professional (discoverable in litigation).
+// ---------------------------------------------------------------------------
+
+model Person {
+  id                     String                  @id @default(cuid())
+  name                   String
+  title                  String?
+  company                String?
+  role                   PersonRole              @default(OTHER)
+  mobilePhone            String?
+  officePhone            String?
+  email                  String?
+  website                String?
+  address                String?
+  /// e.g. ["English", "Spanish"]
+  languages              String[]                @default([])
+  preferredContactMethod PreferredContactMethod?
+  bestTimeToReach        String?
+  /// Working-style tags, e.g. ["Responsive", "Needs it in writing"]
+  temperament            String[]                @default([])
+  notes                  String?                 @db.Text
+  /// Business card photo (storage URL; served through /api/people/[id]/card)
+  cardImageUrl           String?
+  createdById            String
+  updatedById            String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  createdBy Adjuster      @relation("PersonCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy Adjuster?     @relation("PersonUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
+  claims    ClaimPerson[]
+
+  @@index([name])
+  @@index([company])
+  @@index([role])
+  @@index([email])
+}
+
+model ClaimPerson {
+  id          String   @id @default(cuid())
+  claimId     String
+  personId    String
+  /// Their part on this specific file, e.g. "Manager for Bayview Condo Assn."
+  roleOnFile  String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  claim     Claim    @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  person    Person   @relation(fields: [personId], references: [id], onDelete: Restrict)
+  createdBy Adjuster @relation("ClaimPersonLinker", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([claimId, personId])
+  @@index([personId])
 }
 
 // ---------------------------------------------------------------------------
