@@ -1,4 +1,5 @@
 export { OverviewTab } from "./overview-tab";
+export { CoverageStrategyTab } from "./coverage-strategy-tab";
 export { ContactsTab } from "./contacts-tab";
 export { TasksTab } from "./tasks-tab";
 export { ActivityTab } from "./activity-tab";

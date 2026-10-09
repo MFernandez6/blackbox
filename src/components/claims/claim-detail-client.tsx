@@ -20,6 +20,7 @@ import type {
 } from "@/components/claims/claim-detail-types";
 import {
   OverviewTab,
+  CoverageStrategyTab,
   ContactsTab,
   TasksTab,
   ActivityTab,
@@ -56,6 +57,7 @@ export type { ClaimDetailData } from "@/components/claims/claim-detail-types";
 
 const TABS = [
   { id: "overview", label: "Overview" },
+  { id: "strategy", label: "Coverage Strategy" },
   { id: "contacts", label: "Contacts / People" },
   { id: "tasks", label: "Tasks" },
   { id: "documents", label: "Documents Vault" },
@@ -340,6 +342,9 @@ export function ClaimDetailClient({
 
         <TabsContent value="overview">
           <OverviewTab {...workspace} />
+        </TabsContent>
+        <TabsContent value="strategy">
+          <CoverageStrategyTab {...workspace} />
         </TabsContent>
         <TabsContent value="contacts">
           <ContactsTab {...workspace} />
