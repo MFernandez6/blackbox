@@ -14,7 +14,8 @@ export type AuditAction =
   | "POLICY_RECORD_CREATE"
   | "SETTLEMENT_ESTIMATE"
   | "PERSON_LINK"
-  | "PERSON_UNLINK";
+  | "PERSON_UNLINK"
+  | "SUMMARY_REPORT_UPDATE";
 
 export async function logClaimAudit(opts: {
   claimId: string;

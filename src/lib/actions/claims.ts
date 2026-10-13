@@ -180,6 +180,7 @@ export async function deleteClaimAction(
       await tx.claimNote.deleteMany({ where: { claimId } });
       await tx.claimEmail.deleteMany({ where: { claimId } });
       await tx.claimAuditEvent.deleteMany({ where: { claimId } });
+      await tx.claimSummaryReport.deleteMany({ where: { claimId } });
       await tx.claim.delete({ where: { id: claimId } });
     });
 

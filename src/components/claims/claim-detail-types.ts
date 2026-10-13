@@ -15,6 +15,7 @@ import type { PolicyLimitRow } from "@/lib/policy-extraction";
 import type { SettlementEstimate } from "@/lib/claims/settlement-estimate";
 import type { FirmHistory } from "@/lib/claims/firm-history";
 import type { PersonSummary } from "@/components/people/types";
+import type { ClaimReportDetails } from "@/lib/claims/report-details";
 
 export type ClaimPolicyDetail = {
   id: string;
@@ -129,6 +130,18 @@ export type ClaimDetailData = {
     createdAt: string;
     actorName: string;
   }>;
+  reportDetails: ClaimReportDetails;
+  summaryReport: {
+    saved: {
+      status: "DRAFT" | "FINAL";
+      updatedAt: string;
+      updatedBy: string | null;
+      updatedVia: string;
+    } | null;
+    completed: number;
+    total: number;
+    missing: string[];
+  };
   payments: Array<{
     id: string;
     type: PaymentType;

@@ -33,6 +33,50 @@ export const claimDatesUpdateSchema = z.object({
   estimateSentDate: optionalDate,
 });
 
+const optionalText = (max: number) =>
+  z
+    .string()
+    .max(max)
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.trim() ? v.trim() : null));
+
+const optionalInt = (min: number, max: number) =>
+  z.number().int().min(min).max(max).optional().nullable().transform((v) => v ?? null);
+
+const optionalBool = z.boolean().optional().nullable().transform((v) => v ?? null);
+
+export const claimReportDetailsSchema = z.object({
+  certifiedPolicyRequestedDate: optionalDate,
+  certifiedPolicyReceivedDate: optionalDate,
+  dwellingType: optionalText(200),
+  stories: optionalInt(1, 200),
+  constructionType: optionalText(300),
+  roofCovering: optionalText(300),
+  yearBuilt: optionalInt(1700, 2200),
+  occupancy: z
+    .enum(["OWNER_OCCUPIED", "TENANT_OCCUPIED", "SEASONAL", "VACANT"])
+    .optional()
+    .nullable()
+    .transform((v) => v ?? null),
+  inspectionAttendees: optionalText(500),
+  originOfLoss: optionalText(500),
+  priorLosses: optionalText(5000),
+  moldObserved: optionalBool,
+  contentsDamaged: optionalBool,
+  mitigationCompany: optionalText(200),
+  mitigationEngagedBy: z
+    .enum(["INSURED", "PUBLIC_ADJUSTER", "CARRIER", "NONE"])
+    .optional()
+    .nullable()
+    .transform((v) => v ?? null),
+  mitigationStartDate: optionalDate,
+  mitigationServices: optionalText(5000),
+  homeHabitable: optionalBool,
+  aleDetails: optionalText(5000),
+  subrogationNotes: optionalText(5000),
+});
+
 export const claimContactCreateSchema = z.object({
   claimId: z.string().min(1),
   kind: contactKindEnum,

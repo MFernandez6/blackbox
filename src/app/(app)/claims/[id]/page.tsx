@@ -12,6 +12,8 @@ import { parseLimitsJson } from "@/lib/policy-extraction";
 import { blackletterAppUrl } from "@/lib/integrations/blackletter";
 import { coerceSettlementEstimate } from "@/lib/claims/settlement-estimate";
 import { loadFirmHistory } from "@/lib/claims/firm-history";
+import { loadSummaryReportPayload } from "@/lib/reports/summary-report-server";
+import { resolveSummaryReport, summaryReportChecklist } from "@/lib/reports/summary-report";
 
 export const dynamic = "force-dynamic";
 /** Settlement estimate server action runs Claude web research on this route. */
@@ -90,14 +92,16 @@ async function ClaimDetailDataLoader({
     redirect("/dashboard");
   }
 
-  const [adjusters, firmHistory] = await Promise.all([
+  const [adjusters, firmHistory, report] = await Promise.all([
     prisma.adjuster.findMany({
       where: { isActive: true, role: { in: ["ADMIN", "ADJUSTER"] } },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
     loadFirmHistory(claim),
+    loadSummaryReportPayload({ id: claim.id }),
   ]);
+  const reportChecklist = report ? summaryReportChecklist(resolveSummaryReport(report)) : [];
 
   const data: ClaimDetailData = {
     id: claim.id,
@@ -167,6 +171,28 @@ async function ClaimDetailDataLoader({
     estimateCreatedDate: isoDate(claim.estimateCreatedDate),
     reportCreatedDate: isoDate(claim.reportCreatedDate),
     estimateSentDate: isoDate(claim.estimateSentDate),
+    reportDetails: {
+      certifiedPolicyRequestedDate: isoDate(claim.certifiedPolicyRequestedDate),
+      certifiedPolicyReceivedDate: isoDate(claim.certifiedPolicyReceivedDate),
+      dwellingType: claim.dwellingType,
+      stories: claim.stories,
+      constructionType: claim.constructionType,
+      roofCovering: claim.roofCovering,
+      yearBuilt: claim.yearBuilt,
+      occupancy: claim.occupancy,
+      inspectionAttendees: claim.inspectionAttendees,
+      originOfLoss: claim.originOfLoss,
+      priorLosses: claim.priorLosses,
+      moldObserved: claim.moldObserved,
+      contentsDamaged: claim.contentsDamaged,
+      mitigationCompany: claim.mitigationCompany,
+      mitigationEngagedBy: claim.mitigationEngagedBy,
+      mitigationStartDate: isoDate(claim.mitigationStartDate),
+      mitigationServices: claim.mitigationServices,
+      homeHabitable: claim.homeHabitable,
+      aleDetails: claim.aleDetails,
+      subrogationNotes: claim.subrogationNotes,
+    },
     isArchived: claim.isArchived,
     createdAt: claim.createdAt.toISOString(),
     sourceProduct: claim.sourceProduct,
@@ -282,6 +308,19 @@ async function ClaimDetailDataLoader({
       emailDate: e.emailDate.toISOString(),
       createdByName: e.createdBy.name,
     })),
+    summaryReport: {
+      saved: report?.saved
+        ? {
+            status: report.saved.status,
+            updatedAt: report.saved.updatedAt,
+            updatedBy: report.saved.updatedBy,
+            updatedVia: report.saved.updatedVia,
+          }
+        : null,
+      completed: reportChecklist.filter((c) => c.complete).length,
+      total: reportChecklist.length,
+      missing: reportChecklist.filter((c) => !c.complete).map((c) => c.title),
+    },
   };
 
   return (

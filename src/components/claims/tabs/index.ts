@@ -6,3 +6,4 @@ export { ActivityTab } from "./activity-tab";
 export { DemandSettlementTab } from "./demand-settlement-tab";
 export { EmailsTab } from "./emails-tab";
 export { DatesTab } from "./dates-tab";
+export { ReportsTab } from "./reports-tab";

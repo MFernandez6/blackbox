@@ -125,6 +125,7 @@ async function main() {
   await prisma.claimTask.deleteMany();
   await prisma.claimContact.deleteMany();
   await prisma.payment.deleteMany();
+  await prisma.claimSummaryReport.deleteMany();
   await prisma.claimAuditEvent.deleteMany();
   await prisma.claimPolicy.deleteMany();
   await prisma.document.deleteMany();

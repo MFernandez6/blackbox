@@ -9,6 +9,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import {
   claimDatesUpdateSchema,
+  claimReportDetailsSchema,
   claimContactCreateSchema,
   claimContactUpdateSchema,
   claimTaskCreateSchema,
@@ -65,6 +66,41 @@ export async function updateClaimDatesAction(
     return { ok: true, data: undefined };
   } catch {
     return { ok: false, error: "Unable to update claim dates." };
+  }
+}
+
+export async function updateClaimReportDetailsAction(
+  claimId: string,
+  raw: unknown
+): Promise<ActionResult> {
+  try {
+    const gate = await assertCanEditClaim(claimId);
+    if (gate.error) return { ok: false, error: gate.error };
+
+    const parsed = claimReportDetailsSchema.safeParse(raw);
+    if (!parsed.success) {
+      return {
+        ok: false,
+        error: parsed.error.errors[0]?.message ?? "Validation failed.",
+      };
+    }
+
+    const d = parsed.data;
+    await prisma.claim.update({
+      where: { id: claimId },
+      data: {
+        ...d,
+        certifiedPolicyRequestedDate: parseDate(d.certifiedPolicyRequestedDate),
+        certifiedPolicyReceivedDate: parseDate(d.certifiedPolicyReceivedDate),
+        mitigationStartDate: parseDate(d.mitigationStartDate),
+      },
+    });
+
+    revalidateClaim(claimId);
+    revalidatePath(`/claims/${claimId}/summary-report`);
+    return { ok: true, data: undefined };
+  } catch {
+    return { ok: false, error: "Unable to update report details." };
   }
 }
 

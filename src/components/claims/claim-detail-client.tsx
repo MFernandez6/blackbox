@@ -27,6 +27,7 @@ import {
   DemandSettlementTab,
   EmailsTab,
   DatesTab,
+  ReportsTab,
 } from "@/components/claims/tabs";
 import { DocumentsVaultClient } from "@/components/claims/documents-vault-client";
 import { NextDocumentCard } from "@/components/claims/next-document-card";
@@ -58,6 +59,7 @@ export type { ClaimDetailData } from "@/components/claims/claim-detail-types";
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "strategy", label: "Coverage Strategy" },
+  { id: "reports", label: "Reports" },
   { id: "contacts", label: "Contacts / People" },
   { id: "tasks", label: "Tasks" },
   { id: "documents", label: "Documents Vault" },
@@ -345,6 +347,9 @@ export function ClaimDetailClient({
         </TabsContent>
         <TabsContent value="strategy">
           <CoverageStrategyTab {...workspace} />
+        </TabsContent>
+        <TabsContent value="reports">
+          <ReportsTab {...workspace} letterUrl={letterUrl} />
         </TabsContent>
         <TabsContent value="contacts">
           <ContactsTab {...workspace} />

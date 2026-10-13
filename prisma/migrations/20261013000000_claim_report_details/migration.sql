@@ -1,0 +1,22 @@
+-- Summary report details on Claim. Additive only; all columns nullable.
+ALTER TABLE "Claim"
+  ADD COLUMN "certifiedPolicyRequestedDate" DATE,
+  ADD COLUMN "certifiedPolicyReceivedDate" DATE,
+  ADD COLUMN "dwellingType" TEXT,
+  ADD COLUMN "stories" INTEGER,
+  ADD COLUMN "constructionType" TEXT,
+  ADD COLUMN "roofCovering" TEXT,
+  ADD COLUMN "yearBuilt" INTEGER,
+  ADD COLUMN "occupancy" TEXT,
+  ADD COLUMN "inspectionAttendees" TEXT,
+  ADD COLUMN "originOfLoss" TEXT,
+  ADD COLUMN "priorLosses" TEXT,
+  ADD COLUMN "moldObserved" BOOLEAN,
+  ADD COLUMN "contentsDamaged" BOOLEAN,
+  ADD COLUMN "mitigationCompany" TEXT,
+  ADD COLUMN "mitigationEngagedBy" TEXT,
+  ADD COLUMN "mitigationStartDate" DATE,
+  ADD COLUMN "mitigationServices" TEXT,
+  ADD COLUMN "homeHabitable" BOOLEAN,
+  ADD COLUMN "aleDetails" TEXT,
+  ADD COLUMN "subrogationNotes" TEXT;

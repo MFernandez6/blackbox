@@ -173,6 +173,8 @@ model Adjuster {
   peopleCreated  Person[]          @relation("PersonCreator")
   peopleUpdated  Person[]          @relation("PersonUpdater")
   peopleLinked   ClaimPerson[]     @relation("ClaimPersonLinker")
+  summaryReportsCreated ClaimSummaryReport[] @relation("SummaryReportCreator")
+  summaryReportsUpdated ClaimSummaryReport[] @relation("SummaryReportUpdater")
 }
 
 // ---------------------------------------------------------------------------
@@ -258,6 +260,29 @@ model Claim {
   estimateCreatedDate       DateTime? @db.Date
   reportCreatedDate         DateTime? @db.Date
   estimateSentDate          DateTime? @db.Date
+  /// Summary report details — PA-entered facts that draft the report sections
+  certifiedPolicyRequestedDate DateTime? @db.Date
+  certifiedPolicyReceivedDate  DateTime? @db.Date
+  dwellingType           String?
+  stories                Int?
+  constructionType       String?
+  roofCovering           String?
+  yearBuilt              Int?
+  /// OWNER_OCCUPIED | TENANT_OCCUPIED | VACANT | SEASONAL
+  occupancy              String?
+  inspectionAttendees    String?
+  originOfLoss           String?
+  priorLosses            String?     @db.Text
+  moldObserved           Boolean?
+  contentsDamaged        Boolean?
+  mitigationCompany      String?
+  /// INSURED | PUBLIC_ADJUSTER | CARRIER | NONE
+  mitigationEngagedBy    String?
+  mitigationStartDate    DateTime?   @db.Date
+  mitigationServices     String?     @db.Text
+  homeHabitable          Boolean?
+  aleDetails             String?     @db.Text
+  subrogationNotes       String?     @db.Text
   isArchived             Boolean     @default(false)
   createdAt              DateTime    @default(now())
   updatedAt              DateTime    @updatedAt
@@ -275,6 +300,7 @@ model Claim {
   policies         ClaimPolicy[]
   auditEvents      ClaimAuditEvent[]
   documentVaultEntries DocumentVaultEntry[]
+  summaryReport    ClaimSummaryReport?
 
   @@index([status])
   @@index([assignedAdjusterId])
@@ -620,4 +646,34 @@ model ClaimAuditEvent {
   @@index([claimId, createdAt])
   @@index([actorId])
   @@index([action])
+}
+
+// ---------------------------------------------------------------------------
+// ClaimSummaryReport — PA field inspection summary (one per claim).
+// Edited from BLACKBOX and from BLACKLETTER via /api/reports/summary.
+// ---------------------------------------------------------------------------
+
+model ClaimSummaryReport {
+  id          String   @id @default(cuid())
+  claimId     String   @unique
+  /// Header overrides keyed by field; blank keys fall back to live claim data
+  header      Json?
+  /// Narrative sections keyed by section; a present key wins over the auto draft
+  sections    Json?
+  /// DRAFT | FINAL
+  status      String   @default("DRAFT")
+  /// BLACKBOX | BLACKLETTER — where the last edit came from
+  updatedVia  String   @default("BLACKBOX")
+  createdById String
+  updatedById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  claim     Claim    @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  createdBy Adjuster @relation("SummaryReportCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy Adjuster @relation("SummaryReportUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@index([updatedAt])
+  @@index([createdById])
+  @@index([updatedById])
 }

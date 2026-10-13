@@ -29,13 +29,13 @@ export const metadata: Metadata = {
   applicationName: "BLACKBOX",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "BLACKBOX",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#05070b",
+  themeColor: "#F1EDE4",
 };
 
 export default function RootLayout({
@@ -44,7 +44,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" className="dark" data-theme="light" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>

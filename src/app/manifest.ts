@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
       "Internal claims system of record — Blackline Public Adjusters",
     start_url: "/dashboard",
     display: "standalone",
-    background_color: "#05070b",
-    theme_color: "#05070b",
+    background_color: "#F1EDE4",
+    theme_color: "#F1EDE4",
     icons: [
       {
         src: "/icons/icon-192.png",
