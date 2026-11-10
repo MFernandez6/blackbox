@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { computeFeeCap } from "@/lib/compliance/florida-pa";
 import { serviceKeyAuthorized } from "@/lib/integrations/service-auth";
 import { prisma } from "@/lib/prisma";
 
@@ -30,36 +31,57 @@ export async function GET(req: NextRequest) {
     where: { isArchived: false },
     include: {
       claimants: { where: { isPrimaryContact: true }, take: 1 },
-      assignedAdjuster: { select: { name: true } },
+      assignedAdjuster: { select: { name: true, licenseNumber: true } },
+      emergencyDeclaration: { select: { declaredDate: true } },
     },
     orderBy: { updatedAt: "desc" },
   });
 
   return NextResponse.json({
-    claims: claims.map((c) => ({
-      id: c.id,
-      claimNumber: c.claimNumber,
-      status: c.status,
-      lossType: c.lossType,
-      isCatClaim: c.isCatClaim,
-      dateOfLoss: c.dateOfLoss.toISOString().slice(0, 10),
-      propertyAddress: c.propertyAddress,
-      county: c.county,
-      zipCode: c.zipCode,
-      carrierName: c.carrierName,
-      policyNumber: c.policyNumber,
-      estimatedValue: money(c.estimatedValue),
-      demandAmount: money(c.demandAmount),
-      settlementAmount: money(c.settlementAmount),
-      settlementDate: c.settlementDate
-        ? c.settlementDate.toISOString().slice(0, 10)
-        : null,
-      contingencyFeePercent: money(c.contingencyFeePercent) ?? 20,
-      assignedAdjuster: c.assignedAdjuster?.name ?? null,
-      primaryClaimant: c.claimants[0]
-        ? `${c.claimants[0].firstName} ${c.claimants[0].lastName}`
-        : "—",
-    })),
+    claims: claims.map((c) => {
+      const primary = c.claimants[0];
+      const feeCap = computeFeeCap({
+        isEmergencyLoss: c.isCatClaim,
+        emergencyDeclaredDate: c.emergencyDeclaration?.declaredDate ?? null,
+        claimReportedDate: c.claimReportedDate,
+        isReopenedClaim: c.isReopenedClaim,
+      });
+      return {
+        id: c.id,
+        claimNumber: c.claimNumber,
+        status: c.status,
+        lossType: c.lossType,
+        isCatClaim: c.isCatClaim,
+        dateOfLoss: c.dateOfLoss.toISOString().slice(0, 10),
+        propertyAddress: c.propertyAddress,
+        county: c.county,
+        zipCode: c.zipCode,
+        carrierName: c.carrierName,
+        policyNumber: c.policyNumber,
+        estimatedValue: money(c.estimatedValue),
+        demandAmount: money(c.demandAmount),
+        settlementAmount: money(c.settlementAmount),
+        settlementDate: c.settlementDate
+          ? c.settlementDate.toISOString().slice(0, 10)
+          : null,
+        contingencyFeePercent: money(c.contingencyFeePercent) ?? 20,
+        assignedAdjuster: c.assignedAdjuster?.name ?? null,
+        assignedAdjusterId: c.assignedAdjusterId,
+        assignedAdjusterLicense: c.assignedAdjuster?.licenseNumber ?? null,
+        primaryClaimant: primary ? `${primary.firstName} ${primary.lastName}` : "—",
+        claimantFirstName: primary?.firstName,
+        claimantLastName: primary?.lastName,
+        claimantEmail: primary?.email,
+        claimantPhone: primary?.phone,
+        claimantMailing: primary?.mailingAddress,
+        feeCap: {
+          capPercent: feeCap.capPercent,
+          emergencyCapApplies: feeCap.emergencyCapApplies,
+          basis: feeCap.basis,
+          cite: feeCap.cite,
+        },
+      };
+    }),
   });
 }
 
