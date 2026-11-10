@@ -16,6 +16,7 @@ const POLICY_LINES =
 
 const EXTRACTION_PROMPT = `You are extracting insurance policy data for a Florida public adjuster CMS (BLACKBOX).
 The document may be a homeowners policy, condo master / commercial property, CGL, umbrella, excess, flood declarations, COI with policy schedule, auto, or other.
+Write every text field in English, even when the policy is in another language. Keep names, policy numbers, and carrier names as printed.
 
 Return ONLY valid JSON (no markdown) with this shape:
 {

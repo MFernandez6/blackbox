@@ -28,7 +28,6 @@ for (const name of cores) {
 
 const models = {
   eng: "https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz",
-  spa: "https://cdn.jsdelivr.net/npm/@tesseract.js-data/spa/4.0.0_best_int/spa.traineddata.gz",
 };
 
 for (const [lang, url] of Object.entries(models)) {
