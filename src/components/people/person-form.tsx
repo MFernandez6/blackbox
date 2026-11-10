@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import type { PersonRole, PreferredContactMethod } from "@prisma/client";
@@ -47,9 +47,12 @@ const FIELD_LABELS: Record<keyof CardFields, string> = {
   languages: "languages",
 };
 
-async function uploadCard(personId: string, image: Blob) {
+type CardSide = "front" | "back";
+
+async function uploadCard(personId: string, image: Blob, side: CardSide) {
   const form = new FormData();
-  form.append("file", new File([image], "card.jpg", { type: "image/jpeg" }));
+  form.append("file", new File([image], `card-${side}.jpg`, { type: "image/jpeg" }));
+  form.append("side", side);
   const res = await fetch(`/api/people/${personId}/card`, { method: "POST", body: form });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -60,6 +63,7 @@ async function uploadCard(personId: string, image: Blob) {
 export function PersonForm({
   personId,
   initial,
+  savedCards,
   claimId,
   onSaved,
   onCancel,
@@ -67,6 +71,8 @@ export function PersonForm({
   /** Present when editing an existing directory entry */
   personId?: string;
   initial?: PersonFormValues;
+  /** Photos already stored. A new scan replaces only the side that was scanned. */
+  savedCards?: { front: boolean; back: boolean; version: string };
   /** When adding from a claim, the new person is linked to this file */
   claimId?: string;
   onSaved: (id: string) => void;
@@ -74,22 +80,29 @@ export function PersonForm({
 }) {
   const [values, setValues] = useState<PersonFormValues>(initial ?? EMPTY_PERSON);
   const [roleOnFile, setRoleOnFile] = useState("");
-  const [scan, setScan] = useState<CardScan | null>(null);
+  const [scans, setScans] = useState<Partial<Record<CardSide, CardScan>>>({});
+  const scansRef = useRef(scans);
+  scansRef.current = scans;
   const [scanSummary, setScanSummary] = useState("");
   const [otherLanguage, setOtherLanguage] = useState("");
   const [duplicates, setDuplicates] = useState<PossibleDuplicate[]>([]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => () => {
-    if (scan) URL.revokeObjectURL(scan.previewUrl);
-  }, [scan]);
+  useEffect(
+    () => () => {
+      for (const scan of Object.values(scansRef.current)) {
+        if (scan) URL.revokeObjectURL(scan.previewUrl);
+      }
+    },
+    []
+  );
 
   function set<K extends keyof PersonFormValues>(key: K, value: PersonFormValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
   }
 
-  function applyScan(result: CardScan) {
+  function applyScan(side: CardSide, result: CardScan) {
     const filled: string[] = [];
     const next = { ...values };
     for (const key of Object.keys(result.fields) as Array<keyof CardFields>) {
@@ -110,18 +123,26 @@ export function PersonForm({
       }
     }
     setValues(next);
-    setScan(result);
+    setScans((current) => {
+      const previous = current[side];
+      if (previous) URL.revokeObjectURL(previous.previewUrl);
+      return { ...current, [side]: result };
+    });
+    const sideLabel = side === "front" ? "front" : "back";
     setScanSummary(
       filled.length
-        ? `Filled ${filled.join(", ")} from the card. Check them before saving.`
-        : "Nothing new to fill from the card. The photo will still be saved."
+        ? `Filled ${filled.join(", ")} from the ${sideLabel}. The other side is unchanged.`
+        : `The ${sideLabel} photo is ready. The other side is unchanged.`
     );
   }
 
   async function finish(id: string) {
-    if (scan) {
+    const pending = (Object.entries(scans) as Array<[CardSide, CardScan | undefined]>).filter(
+      (entry): entry is [CardSide, CardScan] => Boolean(entry[1])
+    );
+    for (const [side, scan] of pending) {
       try {
-        await uploadCard(id, scan.image);
+        await uploadCard(id, scan.image, side);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Card photo upload failed.");
       }
@@ -199,32 +220,52 @@ export function PersonForm({
         <div className="min-w-0 flex-1 space-y-2">
           <p className="eyebrow">Business card</p>
           <p className="text-sm text-brand-white/80">
-            Take a photo and we&apos;ll fill in what we can read. The card is read on this
-            device, and the photo is saved to the profile.
+            Photograph the front and the back. Each photo stays on the profile. Scanning
+            again replaces only the side you chose.
           </p>
-          <CardScanner
-            onScanned={applyScan}
-            disabled={saving}
-            label={scan ? "Rescan card" : "Scan business card"}
-          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            {(["front", "back"] as const).map((side) => {
+              const scan = scans[side];
+              const saved = side === "front" ? savedCards?.front : savedCards?.back;
+              const savedSrc =
+                personId && saved && savedCards
+                  ? `/api/people/${personId}/card?side=${side}&v=${encodeURIComponent(savedCards.version)}`
+                  : null;
+              const preview = scan?.previewUrl ?? savedSrc;
+              return (
+                <div key={side} className="space-y-2">
+                  <p className="font-sans text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">
+                    {side}
+                  </p>
+                  <CardScanner
+                    onScanned={(result) => applyScan(side, result)}
+                    disabled={saving}
+                    label={scan || saved ? `Rescan ${side}` : `Scan ${side}`}
+                  />
+                  {preview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={preview}
+                      alt={`${side} of the business card`}
+                      className="w-full rounded-xl border border-brand-white/10 object-cover"
+                    />
+                  ) : (
+                    <p className="text-xs text-brand-slate">No {side} photo yet.</p>
+                  )}
+                  {scan ? (
+                    <details className="text-xs text-brand-slate">
+                      <summary className="cursor-pointer select-none">What the {side} read</summary>
+                      <pre className="mt-2 whitespace-pre-wrap rounded-xl border border-brand-white/10 bg-brand-navy/50 p-3 font-mono text-[11px] text-brand-white/80">
+                        {scan.text}
+                      </pre>
+                    </details>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
           {scanSummary ? <p className="text-sm text-brand-gold">{scanSummary}</p> : null}
-          {scan ? (
-            <details className="text-xs text-brand-slate">
-              <summary className="cursor-pointer select-none">What the scanner read</summary>
-              <pre className="mt-2 whitespace-pre-wrap rounded-xl border border-brand-white/10 bg-brand-navy/50 p-3 font-mono text-[11px] text-brand-white/80">
-                {scan.text}
-              </pre>
-            </details>
-          ) : null}
         </div>
-        {scan ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={scan.previewUrl}
-            alt="Scanned business card"
-            className="w-full max-w-[220px] rounded-xl border border-brand-white/10 object-cover sm:w-48"
-          />
-        ) : null}
       </section>
 
       <section className="space-y-3">

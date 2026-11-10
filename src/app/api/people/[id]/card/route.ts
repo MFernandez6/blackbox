@@ -14,8 +14,12 @@ export const runtime = "nodejs";
 const MAX_BYTES = 8 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png"]);
 
+function cardSide(value: FormDataEntryValue | string | null): "front" | "back" {
+  return value === "back" ? "back" : "front";
+}
+
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const session = await getSession();
@@ -23,17 +27,19 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const side = cardSide(req.nextUrl.searchParams.get("side"));
   const person = await prisma.person.findUnique({
     where: { id: params.id },
-    select: { cardImageUrl: true },
+    select: { cardImageUrl: true, cardBackImageUrl: true },
   });
-  if (!person?.cardImageUrl) {
+  const storedUrl = side === "back" ? person?.cardBackImageUrl : person?.cardImageUrl;
+  if (!storedUrl) {
     return NextResponse.json({ error: "No card on file." }, { status: 404 });
   }
 
   try {
-    const bytes = await readStoredDocumentBytes(person.cardImageUrl);
-    const type = person.cardImageUrl.endsWith(".png") ? "image/png" : "image/jpeg";
+    const bytes = await readStoredDocumentBytes(storedUrl);
+    const type = storedUrl.endsWith(".png") ? "image/png" : "image/jpeg";
     return new NextResponse(new Uint8Array(bytes), {
       headers: {
         "Content-Type": type,
@@ -57,13 +63,14 @@ export async function POST(
 
     const person = await prisma.person.findUnique({
       where: { id: params.id },
-      select: { cardImageUrl: true },
+      select: { cardImageUrl: true, cardBackImageUrl: true },
     });
     if (!person) {
       return NextResponse.json({ error: "Person not found." }, { status: 404 });
     }
 
     const form = await req.formData();
+    const side = cardSide(form.get("side"));
     const file = form.get("file");
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "No image provided." }, { status: 400 });
@@ -82,15 +89,20 @@ export async function POST(
     }
     const stored = await storePersonCard({
       personId: params.id,
+      side,
       bytes,
       mimeType: detected.mime,
     });
+    const previous = side === "back" ? person.cardBackImageUrl : person.cardImageUrl;
 
     await prisma.person.update({
       where: { id: params.id },
-      data: { cardImageUrl: stored.fileUrl, updatedById: session.user.id },
+      data:
+        side === "back"
+          ? { cardBackImageUrl: stored.fileUrl, updatedById: session.user.id }
+          : { cardImageUrl: stored.fileUrl, updatedById: session.user.id },
     });
-    if (person.cardImageUrl) await deleteStoredDocument(person.cardImageUrl);
+    if (previous) await deleteStoredDocument(previous);
 
     revalidatePath(`/people/${params.id}`);
     return NextResponse.json({ ok: true });

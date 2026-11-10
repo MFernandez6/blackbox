@@ -58,6 +58,7 @@ export default async function PersonPage({ params }: { params: { id: string } })
     temperament: person.temperament,
     notes: person.notes,
     hasCard: Boolean(person.cardImageUrl),
+    hasCardBack: Boolean(person.cardBackImageUrl),
     createdByName: person.createdBy.name,
     updatedByName: person.updatedBy?.name ?? null,
     createdAt: person.createdAt.toISOString(),

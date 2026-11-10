@@ -73,16 +73,17 @@ export async function storeClaimDocument(opts: {
   return storeObject({ folder: opts.claimId, ...opts });
 }
 
-/** Business card photo for a People directory entry. */
+/** One side of a business card for a People directory entry. */
 export async function storePersonCard(opts: {
   personId: string;
+  side: "front" | "back";
   bytes: Buffer;
   mimeType: string;
 }): Promise<StoredDocument> {
   const ext = opts.mimeType === "image/png" ? "png" : "jpg";
   return storeObject({
     folder: `people/${opts.personId}`,
-    fileName: `card.${ext}`,
+    fileName: `card-${opts.side}.${ext}`,
     bytes: opts.bytes,
     mimeType: opts.mimeType,
   });

@@ -54,6 +54,7 @@ export type PersonDetail = PersonSummary & {
   bestTimeToReach: string | null;
   notes: string | null;
   hasCard: boolean;
+  hasCardBack: boolean;
   createdByName: string;
   updatedByName: string | null;
   createdAt: string;

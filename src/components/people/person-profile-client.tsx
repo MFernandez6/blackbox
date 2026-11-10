@@ -73,6 +73,11 @@ export function PersonProfileClient({
         <PersonForm
           personId={person.id}
           initial={toFormValues(person)}
+          savedCards={{
+            front: person.hasCard,
+            back: person.hasCardBack,
+            version: person.updatedAt,
+          }}
           onSaved={() => {
             setEditing(false);
             router.refresh();
@@ -247,18 +252,38 @@ export function PersonProfileClient({
         <aside className="space-y-6">
           <section className="panel space-y-3 p-4">
             <p className="eyebrow">Business card</p>
-            {person.hasCard ? (
-              <a href={`/api/people/${person.id}/card?v=${encodeURIComponent(person.updatedAt)}`} target="_blank" rel="noreferrer">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`/api/people/${person.id}/card?v=${encodeURIComponent(person.updatedAt)}`}
-                  alt={`${person.name}'s business card`}
-                  className="w-full rounded-xl border border-brand-white/10"
-                />
-              </a>
+            {person.hasCard || person.hasCardBack ? (
+              <div className="space-y-3">
+                {(
+                  [
+                    ["front", person.hasCard],
+                    ["back", person.hasCardBack],
+                  ] as const
+                ).map(([side, present]) =>
+                  present ? (
+                    <a
+                      key={side}
+                      href={`/api/people/${person.id}/card?side=${side}&v=${encodeURIComponent(person.updatedAt)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block"
+                    >
+                      <p className="mb-1 font-sans text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">
+                        {side}
+                      </p>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`/api/people/${person.id}/card?side=${side}&v=${encodeURIComponent(person.updatedAt)}`}
+                        alt={`${side} of ${person.name}'s business card`}
+                        className="w-full rounded-xl border border-brand-white/10"
+                      />
+                    </a>
+                  ) : null
+                )}
+              </div>
             ) : (
               <p className="text-sm text-brand-slate">
-                No card on file.{canEdit ? " Choose Edit to scan one." : ""}
+                No card on file.{canEdit ? " Choose Edit to scan the front and the back." : ""}
               </p>
             )}
           </section>

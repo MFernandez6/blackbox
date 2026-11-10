@@ -553,8 +553,9 @@ model Person {
   /// Working-style tags, e.g. ["Responsive", "Needs it in writing"]
   temperament            String[]                @default([])
   notes                  String?                 @db.Text
-  /// Business card photo (storage URL; served through /api/people/[id]/card)
+  /// Business card photos (storage URLs; served through /api/people/[id]/card)
   cardImageUrl           String?
+  cardBackImageUrl       String?
   createdById            String
   updatedById            String?
   createdAt              DateTime                @default(now())

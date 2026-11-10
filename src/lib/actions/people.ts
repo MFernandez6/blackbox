@@ -229,7 +229,7 @@ export async function deletePersonAction(personId: string): Promise<ActionResult
 
     const person = await prisma.person.findUnique({
       where: { id: personId },
-      select: { name: true, cardImageUrl: true, claims: { select: { claimId: true } } },
+      select: { name: true, cardImageUrl: true, cardBackImageUrl: true, claims: { select: { claimId: true } } },
     });
     if (!person) return { ok: false, error: "Person not found." };
 
@@ -238,6 +238,7 @@ export async function deletePersonAction(personId: string): Promise<ActionResult
       prisma.person.delete({ where: { id: personId } }),
     ]);
     if (person.cardImageUrl) await deleteStoredDocument(person.cardImageUrl);
+    if (person.cardBackImageUrl) await deleteStoredDocument(person.cardBackImageUrl);
 
     for (const link of person.claims) {
       await logClaimAudit({
