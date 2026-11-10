@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Camera, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { parseBusinessCard, type CardFields } from "@/lib/people/card-parser";
@@ -12,8 +12,9 @@ export type CardScan = {
   previewUrl: string;
 };
 
-const OCR_MAX_SIDE = 2000;
+const OCR_MAX_SIDE = 1200;
 const UPLOAD_MAX_SIDE = 1600;
+const READ_TIMEOUT_MS = 20_000;
 
 async function decodeImage(file: File): Promise<CanvasImageSource & { width: number; height: number }> {
   if ("createImageBitmap" in window) {
@@ -94,20 +95,85 @@ function usableChars(text: string) {
   return text.replace(/[^a-z0-9@]/gi, "").length;
 }
 
-const GOOD_READING = 100;
+/** Stop after one pass once the card has something worth filling in. */
+function usefulReading(text: string) {
+  if (usableChars(text) < 8) return false;
+  const fields = parseBusinessCard(text);
+  return Boolean(fields.email || fields.mobilePhone || fields.officePhone || fields.name);
+}
 
-/** Garbage OCR can still report decent confidence, so reward actual contact details. */
-function readingScore(text: string, confidence: number) {
-  const f = parseBusinessCard(text);
-  const realWords = (text.match(/\b[A-Za-z]{4,}\b/g) ?? []).length;
-  return (
-    confidence +
-    (f.email ? 25 : 0) +
-    (f.mobilePhone ? 15 : 0) +
-    (f.officePhone ? 10 : 0) +
-    (f.name ? 10 : 0) +
-    Math.min(realWords, 15)
-  );
+type Reader = import("tesseract.js").Worker;
+const busyListeners = new Set<(busy: boolean) => void>();
+let readerBusy = false;
+let readerPromise: Promise<Reader> | null = null;
+let statusListener: ((status: string) => void) | null = null;
+let lastStatusAt = 0;
+
+function setReaderBusy(next: boolean) {
+  readerBusy = next;
+  busyListeners.forEach((listener) => listener(next));
+}
+
+function reportStatus(status: string) {
+  const now = Date.now();
+  if (status.startsWith("Reading") && now - lastStatusAt < 400) return;
+  lastStatusAt = now;
+  statusListener?.(status);
+}
+
+function getReader() {
+  if (!readerPromise) {
+    readerPromise = (async () => {
+      reportStatus("Loading card reader…");
+      const { createWorker, PSM } = await import("tesseract.js");
+      const worker = await createWorker("eng", 1, {
+        workerPath: "/ocr/worker.min.js",
+        corePath: "/ocr/core",
+        langPath: "/ocr/lang",
+        workerBlobURL: false,
+        logger: (m) => {
+          if (m.status === "recognizing text") {
+            reportStatus(`Reading card… ${Math.round(m.progress * 100)}%`);
+          } else if (m.status.includes("loading")) {
+            reportStatus("Loading card reader…");
+          }
+        },
+      });
+      await worker.setParameters({
+        tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+        user_defined_dpi: "300",
+      });
+      return worker;
+    })().catch((error) => {
+      readerPromise = null;
+      throw error;
+    });
+  }
+  return readerPromise;
+}
+
+function withTimeout<T>(work: Promise<T>, ms: number) {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("timeout")), ms);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
+async function resetReader() {
+  const pending = readerPromise;
+  readerPromise = null;
+  if (!pending) return;
+  const worker = await pending.catch(() => null);
+  await worker?.terminate().catch(() => undefined);
 }
 
 export function CardScanner({
@@ -121,63 +187,64 @@ export function CardScanner({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(readerBusy);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    busyListeners.add(setBusy);
+    void getReader().catch(() => undefined);
+    return () => {
+      busyListeners.delete(setBusy);
+    };
+  }, []);
 
   async function handleFile(file: File) {
     setError("");
     setStatus("Preparing photo…");
-    let worker: import("tesseract.js").Worker | null = null;
+    setReaderBusy(true);
+    statusListener = (next) => setStatus(next);
     try {
       const source = await decodeImage(file);
-
-      const { createWorker } = await import("tesseract.js");
-      // Models are served from this app. The page policy blocks the public CDN
-      // the library would otherwise download the worker, engine, and languages from.
-      worker = await createWorker(["eng", "spa"], 1, {
-        workerPath: "/ocr/worker.min.js",
-        corePath: "/ocr/core",
-        langPath: "/ocr/lang",
-        workerBlobURL: false,
-        logger: (m) => {
-          if (m.status === "recognizing text") {
-            setStatus(`Reading card… ${Math.round(m.progress * 100)}%`);
-          } else if (m.status.includes("loading")) {
-            setStatus("Loading card reader…");
-          }
-        },
-      });
-
-      // Most cards are landscape, so a portrait photo is usually a sideways card.
-      const portrait = source.height > source.width * 1.1;
-      const turns: Array<0 | 90 | 270> = portrait ? [90, 270, 0] : [0, 90, 270];
-      let best = { text: "", score: -Infinity, turn: turns[0] };
+      const worker = await getReader();
+      // A portrait photo is usually a landscape card turned on its side.
+      const portrait = source.height > source.width * 1.15;
+      const turns: Array<0 | 90 | 270> = portrait ? [90, 270] : [0, 90];
+      const started = Date.now();
+      let best = { text: "", chars: -1, turn: turns[0] };
       for (const turn of turns) {
         if (turn !== turns[0]) setStatus("Turning the card…");
-        const { data } = await worker.recognize(
-          prepareForOcr(drawScaled(source, OCR_MAX_SIDE, turn))
+        const { data } = await withTimeout(
+          worker.recognize(prepareForOcr(drawScaled(source, OCR_MAX_SIDE, turn))),
+          READ_TIMEOUT_MS
         );
-        const score = readingScore(data.text, data.confidence);
-        if (score > best.score) best = { text: data.text, score, turn };
-        if (best.score >= GOOD_READING) break;
+        const text = data.text.trim();
+        const chars = usableChars(text);
+        if (chars > best.chars) best = { text, chars, turn };
+        if (usefulReading(text) || Date.now() - started > 12_000) break;
       }
       const upload = await toJpeg(drawScaled(source, UPLOAD_MAX_SIDE, best.turn));
 
-      const text = best.text.trim();
-      if (usableChars(text) < 8) {
+      if (!usefulReading(best.text) && best.chars < 8) {
         setError("Couldn't read that card. Try again with the card filling the frame in good light.");
         return;
       }
       onScanned({
-        fields: parseBusinessCard(text),
-        text,
+        fields: parseBusinessCard(best.text),
+        text: best.text,
         image: upload,
         previewUrl: URL.createObjectURL(upload),
       });
     } catch (e) {
       console.error("Card scan failed:", e);
-      setError("The card reader failed to load. Check your connection and try again.");
+      if (e instanceof Error && e.message === "timeout") {
+        await resetReader();
+        setError("That photo took too long to read. Move the card closer so it fills the frame, then try again.");
+      } else {
+        setError("The card reader failed to load. Check your connection and try again.");
+      }
     } finally {
-      await worker?.terminate().catch(() => undefined);
+      if (statusListener) statusListener = null;
+      setReaderBusy(false);
       setStatus(null);
       if (inputRef.current) inputRef.current.value = "";
     }
@@ -199,7 +266,7 @@ export function CardScanner({
       <Button
         type="button"
         variant="solid"
-        disabled={disabled || status !== null}
+        disabled={disabled || busy || status !== null}
         onClick={() => inputRef.current?.click()}
         className="gap-2"
       >
