@@ -154,8 +154,22 @@ model Adjuster {
   /// bcrypt (or similar) hash for NextAuth Credentials — never store plaintext
   passwordHash  String
   licenseNumber String
+  /// Shown in email signatures and generated documents
+  title         String?
+  phone         String?
   role          AdjusterRole @default(ADJUSTER)
   isActive      Boolean      @default(true)
+  /// Account security — shared by every BLACKSUITE app that authenticates against Adjuster
+  failedLoginCount   Int       @default(0)
+  lockedUntil        DateTime?
+  lastLoginAt        DateTime?
+  passwordChangedAt  DateTime?
+  mustChangePassword Boolean   @default(false)
+  /// Bumped to revoke every outstanding session for this user
+  sessionVersion     Int       @default(0)
+  /// Base32 TOTP secret; MFA is active only when mfaEnabledAt is set
+  mfaSecret          String?
+  mfaEnabledAt       DateTime?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -244,6 +258,15 @@ model Claim {
   settlementEstimateAt   DateTime?
   /// True when loss arises from a declared catastrophe / emergency event
   isCatClaim             Boolean     @default(false)
+  /// Fla. Stat. § 626.854(11) — fee cap inputs
+  emergencyDeclarationId String?
+  claimReportedDate      DateTime?   @db.Date
+  isReopenedClaim        Boolean     @default(false)
+  priorInsurerPayments   Decimal?    @db.Decimal(14, 2)
+  /// PA contract lifecycle — rescission window per Fla. Stat. § 626.854(7)
+  contractExecutedDate   DateTime?   @db.Date
+  contractCancelledDate  DateTime?   @db.Date
+  contractSentToInsurerDate DateTime? @db.Date
   /// Firm contingency: 20% standard, 10% when isCatClaim (FL PA fee cap on CAT)
   /// Application layer must set this from isCatClaim on create/update — do not
   /// rely on the schema default alone when isCatClaim is true.
@@ -288,6 +311,7 @@ model Claim {
   updatedAt              DateTime    @updatedAt
 
   assignedAdjuster Adjuster?       @relation("AssignedAdjuster", fields: [assignedAdjusterId], references: [id], onDelete: Restrict)
+  emergencyDeclaration EmergencyDeclaration? @relation(fields: [emergencyDeclarationId], references: [id], onDelete: Restrict)
   claimants        Claimant[]
   documents        Document[]
   statusHistory    StatusHistory[]
@@ -308,6 +332,48 @@ model Claim {
   @@index([isArchived])
   @@index([updatedAt])
   @@index([insurerClaimNumber])
+  @@index([emergencyDeclarationId])
+}
+
+// ---------------------------------------------------------------------------
+// Governor-declared states of emergency (drives the 10% fee cap window)
+// ---------------------------------------------------------------------------
+
+model EmergencyDeclaration {
+  id             String   @id @default(cuid())
+  name           String
+  executiveOrder String?
+  declaredDate   DateTime @db.Date
+  counties       String?  @db.Text
+  notes          String?  @db.Text
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  claims Claim[]
+
+  @@index([declaredDate])
+}
+
+// ---------------------------------------------------------------------------
+// Authentication events — login audit trail and IP throttling source
+// ---------------------------------------------------------------------------
+
+model AuthEvent {
+  id         String   @id @default(cuid())
+  adjusterId String?
+  email      String
+  /// LOGIN_SUCCESS | LOGIN_FAILURE | LOCKED | MFA_FAILURE | PASSWORD_CHANGED | MFA_ENABLED | MFA_DISABLED | USER_CREATED | USER_UPDATED | PASSWORD_RESET
+  event      String
+  app        String   @default("BLACKBOX")
+  ip         String?
+  userAgent  String?
+  detail     String?
+  createdAt  DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
+  @@index([adjusterId])
 }
 
 // ---------------------------------------------------------------------------

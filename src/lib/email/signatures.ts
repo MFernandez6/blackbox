@@ -1,12 +1,14 @@
 export const EMAIL_SIGNATURE_FENCE = "\n\n-- \n";
 
+/** Firm block; empty values are omitted rather than shown as placeholders. */
 export const FIRM_SIGNATURE = {
-  name: "Blackline Public Adjusters LLC",
-  address: "100 Biscayne Boulevard, Suite 500, Miami, FL 33132",
-  website: "blacklineadjusting.com",
+  name: process.env.NEXT_PUBLIC_FIRM_NAME || "Blackline Public Adjusters LLC",
+  address: process.env.NEXT_PUBLIC_FIRM_ADDRESS || "",
+  phone: process.env.NEXT_PUBLIC_FIRM_PHONE || "",
+  website: process.env.NEXT_PUBLIC_FIRM_WEBSITE || "",
 } as const;
 
-export type EmailSignatoryId = "miguel" | "rosie";
+export type EmailSignatoryId = string;
 
 export type EmailSignatory = {
   id: EmailSignatoryId;
@@ -17,54 +19,47 @@ export type EmailSignatory = {
   license: string | null;
 };
 
-export const EMAIL_SIGNATORIES: readonly EmailSignatory[] = [
-  {
-    id: "miguel",
-    name: "Miguel A. Fernandez, M.Sc.",
-    title: "Principal Adjuster and Founder",
-    email: "miguel.fernandez@blacklineadjusting.com",
-    phone: "(305) 555-0108",
-    license: "W100001",
-  },
-  {
-    id: "rosie",
-    name: "Rosie Jetson",
-    title: "Administrative Assistant",
-    email: "rosie.jetson@blacklineadjusting.com",
-    phone: "(305) 555-0142",
-    license: null,
-  },
-];
-
-export function emailSignatoryById(id: EmailSignatoryId): EmailSignatory {
-  const found = EMAIL_SIGNATORIES.find((s) => s.id === id);
-  if (!found) return EMAIL_SIGNATORIES[0];
-  return found;
+/** Build a signatory from an Adjuster row; license and title come from the user record. */
+export function signatoryFromAdjuster(a: {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  licenseNumber: string | null;
+  title: string | null;
+  phone: string | null;
+}): EmailSignatory {
+  const license = a.licenseNumber?.trim() || null;
+  return {
+    id: a.id,
+    name: a.name,
+    title: a.title?.trim() || (license ? "Licensed Public Adjuster" : "Claims Staff"),
+    email: a.email,
+    phone: a.phone?.trim() || FIRM_SIGNATURE.phone,
+    license,
+  };
 }
 
-export function emailSignatoryForAddress(from: string): EmailSignatory | null {
+export function emailSignatoryById(
+  signatories: readonly EmailSignatory[],
+  id: EmailSignatoryId | null | undefined
+): EmailSignatory | null {
+  return signatories.find((s) => s.id === id) ?? null;
+}
+
+export function emailSignatoryForAddress(
+  signatories: readonly EmailSignatory[],
+  from: string
+): EmailSignatory | null {
   const value = from.trim().toLowerCase();
   if (!value) return null;
-  const exact = EMAIL_SIGNATORIES.find((s) => value.includes(s.email));
-  if (exact) return exact;
-  if (value.includes("jetson") || value.includes("rosie")) {
-    return emailSignatoryById("rosie");
-  }
-  if (value.includes("miguel") || value.includes("fernandez")) {
-    return emailSignatoryById("miguel");
-  }
-  return null;
+  return signatories.find((s) => value.includes(s.email.toLowerCase())) ?? null;
 }
 
-export function emailSignaturePlainText(signatory: EmailSignatory): string {
-  const contact = [
-    signatory.email,
-    signatory.phone,
-    signatory.license ? `Lic. ${signatory.license}` : null,
-  ]
+export function emailSignatureLines(signatory: EmailSignatory): string[] {
+  const contact = [signatory.email, signatory.phone, signatory.license ? `Lic. ${signatory.license}` : null]
     .filter(Boolean)
     .join(" · ");
-
   return [
     signatory.name,
     signatory.title,
@@ -72,7 +67,11 @@ export function emailSignaturePlainText(signatory: EmailSignatory): string {
     contact,
     FIRM_SIGNATURE.address,
     FIRM_SIGNATURE.website,
-  ].join("\n");
+  ].filter(Boolean);
+}
+
+export function emailSignaturePlainText(signatory: EmailSignatory): string {
+  return emailSignatureLines(signatory).join("\n");
 }
 
 export function stripEmailSignature(body: string): string {
@@ -81,11 +80,14 @@ export function stripEmailSignature(body: string): string {
   return body.slice(0, idx);
 }
 
-export function emailSignatoryInBody(body: string): EmailSignatory | null {
+export function emailSignatoryInBody(
+  signatories: readonly EmailSignatory[],
+  body: string
+): EmailSignatory | null {
   const idx = body.indexOf(EMAIL_SIGNATURE_FENCE);
   if (idx === -1) return null;
   const rest = body.slice(idx + EMAIL_SIGNATURE_FENCE.length);
-  return EMAIL_SIGNATORIES.find((s) => rest.startsWith(s.name)) ?? null;
+  return signatories.find((s) => rest.startsWith(s.name)) ?? null;
 }
 
 export function appendEmailSignature(
@@ -96,16 +98,18 @@ export function appendEmailSignature(
   return `${message}${EMAIL_SIGNATURE_FENCE}${emailSignaturePlainText(signatory)}`;
 }
 
-/** Chosen sender wins, then a signature already in the body, then the From address. Outbound mail falls back to Miguel so a draft is never unsigned. */
+/** Chosen sender wins, then a signature already in the body, then the From address, then the acting user. */
 export function resolveOutboundSignatory(opts: {
+  signatories: readonly EmailSignatory[];
   body: string;
   fromAddress: string;
   signatoryId?: EmailSignatoryId | null;
-}): EmailSignatory {
-  if (opts.signatoryId) return emailSignatoryById(opts.signatoryId);
+  fallbackId?: EmailSignatoryId | null;
+}): EmailSignatory | null {
   return (
-    emailSignatoryInBody(opts.body) ??
-    emailSignatoryForAddress(opts.fromAddress) ??
-    emailSignatoryById("miguel")
+    emailSignatoryById(opts.signatories, opts.signatoryId) ??
+    emailSignatoryInBody(opts.signatories, opts.body) ??
+    emailSignatoryForAddress(opts.signatories, opts.fromAddress) ??
+    emailSignatoryById(opts.signatories, opts.fallbackId)
   );
 }

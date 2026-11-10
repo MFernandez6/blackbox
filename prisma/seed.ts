@@ -7,7 +7,7 @@
  * Or directly:
  *   ALLOW_DESTRUCTIVE_SEED=1 npx tsx prisma/seed.ts
  *
- * Default passwords for all seeded adjusters: Password123!
+ * Seeded adjusters share the password in SEED_PASSWORD (local/dev databases only).
  * (bcrypt cost 10 — change immediately in any shared environment)
  *
  * NEVER run against production. This script wipes claims/users.
@@ -17,7 +17,6 @@ import { PrismaClient, ClaimStatus, LossType, PreferredContactMethod, DocType, P
 import { hash } from "bcryptjs";
 import {
   appendEmailSignature,
-  emailSignatoryById,
 } from "../src/lib/email/signatures";
 
 const prisma = new PrismaClient();
@@ -29,7 +28,15 @@ if (process.env.ALLOW_DESTRUCTIVE_SEED !== "1") {
   process.exit(1);
 }
 
-const SEED_PASSWORD = "Password123!";
+const SEED_PASSWORD = process.env.SEED_PASSWORD ?? "";
+if (SEED_PASSWORD.length < 12) {
+  console.error("Refusing to seed: set SEED_PASSWORD (12+ characters) for the local demo accounts.");
+  process.exit(1);
+}
+if (/supabase\.(co|com)/.test(process.env.DATABASE_URL ?? "")) {
+  console.error("Refusing to seed: DATABASE_URL points at a hosted Supabase database.");
+  process.exit(1);
+}
 
 type SeedClaimInput = {
   year: number;
@@ -821,7 +828,14 @@ async function main() {
             toAddress: "claims@citizens.example",
             body: appendEmailSignature(
               "Please confirm receipt of FNOL and assign desk examiner. Loss photos and mitigation invoice to follow.",
-              emailSignatoryById("miguel")
+              {
+                id: "seed",
+                name: "Miguel A. Fernandez",
+                title: "Licensed Public Adjuster",
+                email: "miguel.fernandez@blacklineadjusting.com",
+                phone: "",
+                license: null,
+              }
             ),
             emailDate: daysAgo(10),
             createdById: createdById,
@@ -837,9 +851,9 @@ async function main() {
   console.log("Seed complete.");
   console.log("  Adjusters: 5 (owner ADMIN + samples)");
   console.log(`  Claims:    ${claims.length} (year ${year}, sequence 0001–000${claims.length})`);
-  console.log(`  Login:     miguel.fernandez@blacklineadjusting.com / ${SEED_PASSWORD}`);
-  console.log(`             diana.reyes@blacklineadjusting.com / ${SEED_PASSWORD}`);
-  console.log(`             frankie@blacklineadjusting.com / ${SEED_PASSWORD}`);
+  console.log(`  Login:     miguel.fernandez@blacklineadjusting.com (password from SEED_PASSWORD)`);
+  console.log(`             diana.reyes@blacklineadjusting.com (password from SEED_PASSWORD)`);
+  console.log(`             frankie@blacklineadjusting.com (password from SEED_PASSWORD)`);
 }
 
 main()

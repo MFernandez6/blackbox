@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { storeClaimDocument } from "@/lib/storage";
 import { logClaimAudit } from "@/lib/claims/audit";
 import { docTypeEnum } from "@/lib/schemas/claim";
+import { serviceKeyAuthorized } from "@/lib/integrations/service-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,11 +23,7 @@ const bodySchema = z.object({
 });
 
 function authorized(req: NextRequest): boolean {
-  const key = process.env.BLACKLETTER_API_KEY;
-  if (!key) return false;
-  const header = req.headers.get("authorization");
-  const token = header?.startsWith("Bearer ") ? header.slice(7) : header;
-  return token === key;
+  return serviceKeyAuthorized(req, [process.env.BLACKLETTER_API_KEY]);
 }
 
 function safeFileName(name: string) {

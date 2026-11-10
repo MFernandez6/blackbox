@@ -46,6 +46,7 @@ type Doc = {
   id: string;
   fileName: string;
   fileUrl: string;
+  sourcePath?: string;
   mimeType: string;
   docType: DocType;
   uploadedAt: string;
@@ -824,7 +825,11 @@ export function DocumentsVaultClient({
                     </dl>
                     <Button asChild size="sm" variant="outline">
                       <a
-                        href={previewDoc.fileUrl}
+                        href={
+                          isGoogleDoc(previewDoc.fileUrl)
+                            ? previewDoc.fileUrl
+                            : `${previewDoc.fileUrl}?download=1`
+                        }
                         target="_blank"
                         rel="noreferrer"
                         download={

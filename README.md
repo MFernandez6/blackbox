@@ -41,7 +41,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### Seeded credentials
 
-All seed adjusters share password: `Password123!`
+Seed adjusters share the password you supply in `SEED_PASSWORD` (local databases only; the seed refuses hosted Supabase URLs).
 
 | Email | Role |
 |---|---|

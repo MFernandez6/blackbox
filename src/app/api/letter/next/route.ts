@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
+import { assertCanViewClaim } from "@/lib/claims/access";
 import { fetchNextDocument } from "@/lib/integrations/blackletter";
 import { prisma } from "@/lib/prisma";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  * Prefers live BLACKLETTER; falls back to the same stage map on this file's vault.
  */
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -19,6 +19,10 @@ export async function GET(req: NextRequest) {
   const claimId = req.nextUrl.searchParams.get("claimId");
   if (!claimId) {
     return NextResponse.json({ error: "claimId required" }, { status: 400 });
+  }
+  const gate = await assertCanViewClaim(claimId);
+  if (gate.error) {
+    return NextResponse.json({ error: gate.error }, { status: 403 });
   }
 
   const claim = await prisma.claim.findUnique({

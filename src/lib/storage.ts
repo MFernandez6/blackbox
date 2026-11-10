@@ -2,14 +2,24 @@ import { mkdir, writeFile, readFile, unlink } from "fs/promises";
 import path from "path";
 
 export const CLAIM_DOCS_BUCKET = "claim-documents";
+/** Signed links handed to the browser expire quickly; the app re-signs on every view. */
+export const SIGNED_URL_TTL_SECONDS = 300;
 
 function supabaseConfig(): { url: string; key: string } | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) return null;
-  return { url, key };
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (url && serviceKey) return { url, key: serviceKey };
+  if (process.env.VERCEL) {
+    if (url) {
+      throw new Error(
+        "SUPABASE_SERVICE_ROLE_KEY is required in production; claim files live in a private bucket."
+      );
+    }
+    return null;
+  }
+  const devKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !devKey) return null;
+  return { url, key: devKey };
 }
 
 export type StoredDocument = {
@@ -17,23 +27,37 @@ export type StoredDocument = {
   storagePath: string;
 };
 
-function publicObjectUrl(cfg: { url: string }, objectPath: string) {
+/**
+ * Canonical object reference persisted in Document.fileUrl. The bucket is
+ * private, so this URL is an identifier only — it never grants access.
+ */
+function canonicalObjectUrl(cfg: { url: string }, objectPath: string) {
   return `${cfg.url}/storage/v1/object/public/${CLAIM_DOCS_BUCKET}/${objectPath}`;
 }
 
-function extractStoragePath(fileUrl: string): string | null {
-  const marker = `/object/public/${CLAIM_DOCS_BUCKET}/`;
-  const idx = fileUrl.indexOf(marker);
-  if (idx >= 0) return fileUrl.slice(idx + marker.length).split("?")[0];
-  const signed = `/object/sign/${CLAIM_DOCS_BUCKET}/`;
-  const sidx = fileUrl.indexOf(signed);
-  if (sidx >= 0) {
-    return fileUrl.slice(sidx + signed.length).split("?")[0];
+export function extractStoragePath(fileUrl: string): string | null {
+  for (const marker of [
+    `/object/public/${CLAIM_DOCS_BUCKET}/`,
+    `/object/sign/${CLAIM_DOCS_BUCKET}/`,
+    `/object/authenticated/${CLAIM_DOCS_BUCKET}/`,
+  ]) {
+    const idx = fileUrl.indexOf(marker);
+    if (idx >= 0) return decodeURIComponent(fileUrl.slice(idx + marker.length).split("?")[0]);
   }
   if (fileUrl.startsWith("/uploads/")) {
     return fileUrl.replace(/^\//, "");
   }
   return null;
+}
+
+export function isExternalDocumentUrl(fileUrl: string): boolean {
+  return /^https:\/\/docs\.google\.com\//i.test(fileUrl);
+}
+
+/** Browser-facing link for a Document: access-checked app route, or the Google Doc itself. */
+export function documentHref(doc: { id: string; fileUrl: string }): string {
+  if (isExternalDocumentUrl(doc.fileUrl)) return doc.fileUrl;
+  return `/api/documents/${doc.id}/file`;
 }
 
 /**
@@ -95,14 +119,14 @@ async function storeObject(opts: {
     }
 
     return {
-      fileUrl: publicObjectUrl(cfg, objectPath),
+      fileUrl: canonicalObjectUrl(cfg, objectPath),
       storagePath: objectPath,
     };
   }
 
   if (process.env.VERCEL) {
     throw new Error(
-      "File storage is not configured for production. Set NEXT_PUBLIC_SUPABASE_URL and a Supabase API key (prefer SUPABASE_SERVICE_ROLE_KEY) in Vercel, then redeploy."
+      "File storage is not configured for production. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel, then redeploy."
     );
   }
 
@@ -115,22 +139,23 @@ async function storeObject(opts: {
   return { fileUrl, storagePath: objectPath };
 }
 
-/** Create a time-limited signed URL when service role is available; else return stored URL. */
+/** Short-lived signed URL for a stored object (null when the URL is not a storage object). */
 export async function getDocumentAccessUrl(
   fileUrl: string,
-  expiresInSeconds = 3600
-): Promise<string> {
-  if (process.env.STORAGE_USE_SIGNED_URLS !== "1") {
-    return fileUrl;
-  }
+  opts: { expiresInSeconds?: number; downloadName?: string } = {}
+): Promise<string | null> {
+  if (isExternalDocumentUrl(fileUrl)) return fileUrl;
+  const objectPath = extractStoragePath(fileUrl);
+  if (!objectPath) return null;
+  if (objectPath.startsWith("uploads/")) return `/${objectPath}`;
 
   const cfg = supabaseConfig();
-  const objectPath = extractStoragePath(fileUrl);
-  if (!cfg || !objectPath || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return fileUrl;
-  }
+  if (!cfg) return null;
 
-  const endpoint = `${cfg.url}/storage/v1/object/sign/${CLAIM_DOCS_BUCKET}/${objectPath}`;
+  const endpoint = `${cfg.url}/storage/v1/object/sign/${CLAIM_DOCS_BUCKET}/${objectPath
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/")}`;
   const res = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -138,15 +163,23 @@ export async function getDocumentAccessUrl(
       apikey: cfg.key,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ expiresIn: expiresInSeconds }),
+    body: JSON.stringify({ expiresIn: opts.expiresInSeconds ?? SIGNED_URL_TTL_SECONDS }),
+    cache: "no-store",
   });
 
-  if (!res.ok) return fileUrl;
+  if (!res.ok) {
+    console.error(`[storage] sign failed (${res.status}) for ${objectPath}`);
+    return null;
+  }
   const data = (await res.json()) as { signedURL?: string; signedUrl?: string };
   const signed = data.signedURL || data.signedUrl;
-  if (!signed) return fileUrl;
-  if (signed.startsWith("http")) return signed;
-  return `${cfg.url}/storage/v1${signed.startsWith("/") ? "" : "/"}${signed}`;
+  if (!signed) return null;
+  const absolute = signed.startsWith("http")
+    ? signed
+    : `${cfg.url}/storage/v1${signed.startsWith("/") ? "" : "/"}${signed}`;
+  if (!opts.downloadName) return absolute;
+  const sep = absolute.includes("?") ? "&" : "?";
+  return `${absolute}${sep}download=${encodeURIComponent(opts.downloadName)}`;
 }
 
 export async function deleteStoredDocument(fileUrl: string): Promise<void> {
@@ -172,24 +205,32 @@ export async function deleteStoredDocument(fileUrl: string): Promise<void> {
   }
 }
 
-/** Load document bytes from a public/signed URL or local /uploads path. */
+/** Load document bytes server-side with the service key (works with private buckets). */
 export async function readStoredDocumentBytes(
   fileUrl: string
 ): Promise<Buffer> {
-  const accessUrl = await getDocumentAccessUrl(fileUrl);
+  const objectPath = extractStoragePath(fileUrl);
 
-  if (/^https?:\/\//i.test(accessUrl)) {
-    const res = await fetch(accessUrl);
+  if (objectPath?.startsWith("uploads/")) {
+    return readFile(path.join(process.cwd(), "public", objectPath));
+  }
+
+  const cfg = supabaseConfig();
+  if (objectPath && cfg) {
+    const res = await fetch(
+      `${cfg.url}/storage/v1/object/authenticated/${CLAIM_DOCS_BUCKET}/${objectPath}`,
+      { headers: { Authorization: `Bearer ${cfg.key}`, apikey: cfg.key }, cache: "no-store" }
+    );
     if (!res.ok) {
       throw new Error(`Unable to fetch document (${res.status}).`);
     }
     return Buffer.from(await res.arrayBuffer());
   }
 
-  if (accessUrl.startsWith("/")) {
-    const rel = accessUrl.replace(/^\//, "");
-    const abs = path.join(process.cwd(), "public", rel);
-    return readFile(abs);
+  if (/^https?:\/\//i.test(fileUrl)) {
+    const res = await fetch(fileUrl);
+    if (!res.ok) throw new Error(`Unable to fetch document (${res.status}).`);
+    return Buffer.from(await res.arrayBuffer());
   }
 
   throw new Error("Unsupported document URL for reading.");

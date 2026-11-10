@@ -3,6 +3,7 @@
 export type VaultDocLike = {
   fileName: string;
   fileUrl: string;
+  sourcePath?: string;
   displayPath?: string | null;
 };
 
@@ -26,7 +27,7 @@ export function isInspectionVaultDoc(
   claimNumber: string
 ): boolean {
   if (doc.displayPath && doc.displayPath.trim()) return true;
-  return doc.fileUrl.includes(`/claims/${claimNumber}/`);
+  return (doc.sourcePath ?? doc.fileUrl).includes(`/claims/${claimNumber}/`);
 }
 
 export function inspectionFolder(
@@ -49,9 +50,10 @@ export function inspectionFolder(
   }
 
   const marker = `/claims/${claimNumber}/`;
-  const idx = doc.fileUrl.indexOf(marker);
+  const source = doc.sourcePath ?? doc.fileUrl;
+  const idx = source.indexOf(marker);
   if (idx >= 0) {
-    const rest = doc.fileUrl.slice(idx + marker.length).split("?")[0];
+    const rest = source.slice(idx + marker.length).split("?")[0];
     const [session = "inspection", location = "unspecified"] = rest.split("/");
     return {
       sessionKey: session,

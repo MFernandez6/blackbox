@@ -26,13 +26,13 @@ export function EmailSignature({ signatory }: { signatory: EmailSignatory }) {
             {signatory.title}
           </p>
           <p className="mt-2 font-sans text-[11px] leading-relaxed text-brand-slate">
-            {FIRM_SIGNATURE.name}
-            <br />
-            {contact}
-            <br />
-            {FIRM_SIGNATURE.address}
-            <br />
-            {FIRM_SIGNATURE.website}
+            {[FIRM_SIGNATURE.name, contact, FIRM_SIGNATURE.address, FIRM_SIGNATURE.website]
+              .filter(Boolean)
+              .map((line, i) => (
+                <span key={i} className="block">
+                  {line}
+                </span>
+              ))}
           </p>
         </div>
       </div>

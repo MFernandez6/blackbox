@@ -5,6 +5,7 @@ import { assertCanEditClaim } from "@/lib/claims/access";
 import {
   appendEmailSignature,
   resolveOutboundSignatory,
+  signatoryFromAdjuster,
 } from "@/lib/email/signatures";
 import { prisma } from "@/lib/prisma";
 import {
@@ -378,9 +379,16 @@ export async function createClaimEmailAction(
     const signatory =
       parsed.data.direction === "OUTBOUND"
         ? resolveOutboundSignatory({
+            signatories: (
+              await prisma.adjuster.findMany({
+                where: { isActive: true },
+                select: { id: true, name: true, email: true, role: true, licenseNumber: true, title: true, phone: true },
+              })
+            ).map(signatoryFromAdjuster),
             body: parsed.data.body,
             fromAddress: parsed.data.fromAddress,
             signatoryId: parsed.data.signatoryId,
+            fallbackId: gate.session.user.id,
           })
         : null;
     const fromAddress = signatory?.email ?? parsed.data.fromAddress;

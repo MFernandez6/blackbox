@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
+import { serviceKeyAuthorized } from "@/lib/integrations/service-auth";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -8,16 +8,8 @@ import { prisma } from "@/lib/prisma";
  * Never accepts writes. Claim status remains owned by this product.
  */
 
-function authorized(req: NextRequest, hasSession: boolean): boolean {
-  if (hasSession) return true;
-  const keys = [
-    process.env.BLACKLEDGER_API_KEY,
-    process.env.BLACKBOX_API_KEY,
-  ].filter((key): key is string => !!key);
-  if (keys.length === 0) return false;
-  const header = req.headers.get("authorization");
-  const token = header?.startsWith("Bearer ") ? header.slice(7) : header;
-  return !!token && keys.includes(token);
+function serviceAuthorized(req: NextRequest): boolean {
+  return serviceKeyAuthorized(req, [process.env.BLACKLEDGER_API_KEY, process.env.BLACKBOX_API_KEY]);
 }
 
 function money(value: { toString(): string } | number | null | undefined): number | null {
@@ -27,9 +19,11 @@ function money(value: { toString(): string } | number | null | undefined): numbe
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!authorized(req, !!session?.user)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!serviceAuthorized(req)) {
+    const session = await getSession();
+    if (session?.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
   }
 
   const claims = await prisma.claim.findMany({

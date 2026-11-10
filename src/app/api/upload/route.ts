@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { ExtractionStatus, type PolicyLine } from "@prisma/client";
 import {
-  authOptions,
+  getSession,
   canEdit,
   resolveSessionAdjuster,
 } from "@/lib/auth";
@@ -10,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { docTypeEnum } from "@/lib/schemas/claim";
 import { coercePolicyLine } from "@/lib/policy-extraction";
 import { storeClaimDocument } from "@/lib/storage";
+import { ALLOWED_UPLOAD_SUMMARY, detectAllowedFile } from "@/lib/security/file-signature";
 import { logClaimAudit } from "@/lib/claims/audit";
 import { revalidatePath } from "next/cache";
 
@@ -18,7 +18,7 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user || !canEdit(session.user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -87,11 +87,18 @@ export async function POST(req: NextRequest) {
     }
 
     const bytes = Buffer.from(await file.arrayBuffer());
+    const detected = detectAllowedFile(bytes, file.name);
+    if (!detected) {
+      return NextResponse.json(
+        { error: `Unsupported file type. Allowed: ${ALLOWED_UPLOAD_SUMMARY}.` },
+        { status: 415 }
+      );
+    }
     const stored = await storeClaimDocument({
       claimId,
       fileName: file.name,
       bytes,
-      mimeType: file.type || "application/octet-stream",
+      mimeType: detected.mime,
     });
 
     const extractionStatus =
@@ -110,7 +117,7 @@ export async function POST(req: NextRequest) {
         fileName: file.name,
         fileUrl: stored.fileUrl,
         fileSizeBytes: bytes.length,
-        mimeType: file.type || "application/octet-stream",
+        mimeType: detected.mime,
         docType: docTypeParsed.data,
         uploadedById: uploader.id,
         extractionStatus,
@@ -142,11 +149,12 @@ export async function POST(req: NextRequest) {
     revalidatePath(`/claims/${claimId}`);
     revalidatePath(`/claims/${claimId}/documents`);
 
-    return NextResponse.json({ id: doc.id, fileUrl: stored.fileUrl });
+    return NextResponse.json({ id: doc.id, fileUrl: `/api/documents/${doc.id}/file` });
   } catch (e) {
     console.error("Upload failed:", e);
-    const message =
-      e instanceof Error ? e.message : "Upload failed unexpectedly.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Upload failed. Retry, or contact an admin if it keeps happening." },
+      { status: 500 }
+    );
   }
 }

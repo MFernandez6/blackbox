@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
-import { ChevronDown, LogOut, Moon, Sun, UserRound } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, LogOut, Moon, ShieldCheck, Siren, Sun, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/use-theme";
 
@@ -106,6 +107,25 @@ export function AccountMenu({ user }: Props) {
           </div>
 
           <div className="my-3 border-t border-brand-white/10" />
+
+          {[
+            { href: "/account", label: "Security", icon: ShieldCheck, show: true },
+            { href: "/admin/users", label: "Users", icon: Users, show: user.role === "ADMIN" },
+            { href: "/admin/emergencies", label: "Emergencies", icon: Siren, show: user.role === "ADMIN" },
+          ]
+            .filter((item) => item.show)
+            .map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-2 font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-white/80 transition-colors hover:bg-brand-gold/10 hover:text-brand-gold"
+              >
+                <item.icon className="h-3.5 w-3.5" aria-hidden />
+                {item.label}
+              </Link>
+            ))}
 
           <button
             type="button"

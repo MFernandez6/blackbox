@@ -7,15 +7,14 @@ import type { LossType } from "@prisma/client";
 import { LOSS_TYPE_LABELS } from "@/lib/claims/labels";
 import { updateClaimDetailAction } from "@/lib/actions/claims";
 import type { ClaimDetailUpdateInput } from "@/lib/schemas/claim";
-import { contingencyForCat } from "@/lib/utils";
 import { GoogleMapsButton } from "@/components/claims/google-maps-button";
 import { PolicyCoveragePanel } from "@/components/claims/policy-coverage-panel";
 import type { ClaimWorkspaceProps } from "@/components/claims/claim-detail-types";
 import { ClaimField } from "@/components/claims/claim-field";
+import { CompliancePanel } from "@/components/claims/compliance-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import {
   Select,
@@ -43,7 +42,6 @@ type DetailState = {
   fieldAdjusterEmail: string;
   experts: ClaimDetailUpdateInput["experts"];
   estimatedValue: string;
-  isCatClaim: boolean;
   assignedAdjusterId: string;
 };
 
@@ -66,7 +64,6 @@ function initDetailState(claim: ClaimWorkspaceProps["claim"]): DetailState {
     fieldAdjusterEmail: claim.fieldAdjusterEmail ?? "",
     experts: claim.experts.length ? claim.experts : [],
     estimatedValue: claim.estimatedValue ?? "",
-    isCatClaim: claim.isCatClaim,
     assignedAdjusterId: claim.assignedAdjusterId ?? "",
   };
 }
@@ -227,18 +224,6 @@ export function OverviewTab({ claim, adjusters, editable }: ClaimWorkspaceProps)
             />
           </ClaimField>
         </div>
-        <div className="mt-4 flex items-center gap-2">
-          <Checkbox
-            disabled={!editable}
-            checked={detail.isCatClaim}
-            onCheckedChange={(c) =>
-              setDetail({ ...detail, isCatClaim: !!c })
-            }
-          />
-          <span className="text-sm">
-            CAT claim — contingency {contingencyForCat(detail.isCatClaim)}%
-          </span>
-        </div>
         {editable ? (
           <Button
             className="mt-4"
@@ -250,6 +235,15 @@ export function OverviewTab({ claim, adjusters, editable }: ClaimWorkspaceProps)
           </Button>
         ) : null}
       </section>
+
+      <CompliancePanel
+        claimId={claim.id}
+        dateOfLoss={claim.dateOfLoss.slice(0, 10)}
+        isCatClaim={claim.isCatClaim}
+        feePercent={claim.contingencyFeePercent}
+        compliance={claim.compliance}
+        editable={editable}
+      />
 
       <section className="border border-brand-gold/15 p-4 sm:p-5 rounded-2xl">
         <p className="eyebrow mb-4">Policy Details</p>

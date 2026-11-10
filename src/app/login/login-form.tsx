@@ -16,11 +16,20 @@ import { BlacklineLogo } from "@/components/brand/blackline-mark";
 
 type LoginValues = z.infer<typeof loginSchema>;
 
+const LOGIN_ERROR_MESSAGES: Record<string, string> = {
+  INVALID_CREDENTIALS: "Credentials rejected. Access denied.",
+  ACCOUNT_LOCKED: "Too many failed attempts. This account is locked for 15 minutes — or ask an admin to unlock it.",
+  TOO_MANY_ATTEMPTS: "Too many failed sign-ins from this network. Wait 15 minutes and retry.",
+  MFA_INVALID: "Authenticator code rejected. Check the time on your phone and retry.",
+};
+
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const idleNotice = searchParams.get("reason") === "idle";
+  const reason = searchParams.get("reason");
   const [error, setError] = useState("");
+  const [needsOtp, setNeedsOtp] = useState(false);
+  const [otp, setOtp] = useState("");
   const {
     register,
     handleSubmit,
@@ -34,10 +43,16 @@ export default function LoginForm() {
     const res = await signIn("credentials", {
       email: values.email,
       password: values.password,
+      otp: needsOtp ? otp : "",
       redirect: false,
     });
     if (res?.error) {
-      setError("Credentials rejected. Access denied.");
+      if (res.error === "MFA_REQUIRED") {
+        setNeedsOtp(true);
+        return;
+      }
+      setError(LOGIN_ERROR_MESSAGES[res.error] ?? LOGIN_ERROR_MESSAGES.INVALID_CREDENTIALS);
+      if (res.error === "MFA_INVALID") setOtp("");
       return;
     }
     router.push("/dashboard");
@@ -70,9 +85,15 @@ export default function LoginForm() {
 
         <div className="hairline mb-8" />
 
-        {idleNotice ? (
+        {reason === "idle" ? (
           <ErrorBanner
             message="Signed out after 5 minutes of inactivity. Sign in again to continue."
+            className="mb-6"
+          />
+        ) : null}
+        {reason === "password" ? (
+          <ErrorBanner
+            message="Password changed. Sign in with your new password."
             className="mb-6"
           />
         ) : null}
@@ -115,11 +136,26 @@ export default function LoginForm() {
               <p className="text-xs text-denied">{errors.password.message}</p>
             ) : null}
           </div>
+          {needsOtp ? (
+            <div className="space-y-2">
+              <Label htmlFor="otp">Authenticator code</Label>
+              <Input
+                id="otp"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                autoFocus
+                maxLength={6}
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+              />
+              <p className="text-xs text-brand-slate">Enter the 6-digit code from your authenticator app.</p>
+            </div>
+          ) : null}
           <Button
             type="submit"
             variant="solid"
             className="w-full"
-            disabled={isSubmitting}
+            disabled={isSubmitting || (needsOtp && otp.length !== 6)}
           >
             {isSubmitting ? "Authenticating…" : "Enter BLACKBOX™"}
           </Button>

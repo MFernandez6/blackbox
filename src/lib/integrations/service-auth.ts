@@ -1,18 +1,11 @@
 import type { NextRequest } from "next/server";
-
-function bearerToken(req: NextRequest | Request): string | null {
-  const header = req.headers.get("authorization");
-  if (!header) return null;
-  return header.startsWith("Bearer ") ? header.slice(7).trim() : header.trim();
-}
+import { bearerToken, matchesAnyKey } from "@/lib/security/safe-compare";
 
 export function serviceKeyAuthorized(
   req: NextRequest | Request,
   keys: Array<string | undefined>
 ): boolean {
-  const token = bearerToken(req);
-  if (!token) return false;
-  return keys.some((key) => !!key && key === token);
+  return matchesAnyKey(bearerToken(req), keys.map((k) => k?.trim()));
 }
 
 export function blackgateServiceAuthorized(req: NextRequest | Request): boolean {

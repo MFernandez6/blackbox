@@ -1,3 +1,4 @@
+import type { EmailSignatory } from "@/lib/email/signatures";
 import type {
   ClaimStatus,
   LossType,
@@ -78,6 +79,8 @@ export type ClaimDetailData = {
   firmHistory: FirmHistory;
   isCatClaim: boolean;
   contingencyFeePercent: string;
+  compliance: ClaimComplianceData;
+  signatories: EmailSignatory[];
   assignedAdjusterId: string | null;
   initialContactDate: string | null;
   scheduledAppointmentDate: string | null;
@@ -112,6 +115,8 @@ export type ClaimDetailData = {
     id: string;
     fileName: string;
     fileUrl: string;
+    /** Storage object path, used only for vault folder grouping */
+    sourcePath?: string;
     mimeType: string;
     docType: DocType;
     uploadedAt: string;
@@ -194,6 +199,24 @@ export type ClaimDetailData = {
     emailDate: string;
     createdByName: string;
   }>;
+};
+
+export type EmergencyDeclarationOption = {
+  id: string;
+  name: string;
+  executiveOrder: string | null;
+  declaredDate: string;
+};
+
+export type ClaimComplianceData = {
+  emergencyDeclarationId: string | null;
+  claimReportedDate: string | null;
+  isReopenedClaim: boolean;
+  priorInsurerPayments: string | null;
+  contractExecutedDate: string | null;
+  contractSentToInsurerDate: string | null;
+  contractCancelledDate: string | null;
+  declarations: EmergencyDeclarationOption[];
 };
 
 export type AdjusterOption = { id: string; name: string };

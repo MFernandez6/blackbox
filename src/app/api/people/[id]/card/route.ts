@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
-import { authOptions, canEdit } from "@/lib/auth";
+import { getSession, canEdit } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   deleteStoredDocument,
   readStoredDocumentBytes,
   storePersonCard,
 } from "@/lib/storage";
+import { detectAllowedFile } from "@/lib/security/file-signature";
 
 export const runtime = "nodejs";
 
@@ -18,7 +18,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -50,7 +50,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user || !canEdit(session.user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -75,10 +75,15 @@ export async function POST(
       return NextResponse.json({ error: "Card photo exceeds 8MB." }, { status: 400 });
     }
 
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const detected = detectAllowedFile(bytes, file.name);
+    if (!detected || !ALLOWED_TYPES.has(detected.mime)) {
+      return NextResponse.json({ error: "Card photo must be an image." }, { status: 400 });
+    }
     const stored = await storePersonCard({
       personId: params.id,
-      bytes: Buffer.from(await file.arrayBuffer()),
-      mimeType: file.type,
+      bytes,
+      mimeType: detected.mime,
     });
 
     await prisma.person.update({

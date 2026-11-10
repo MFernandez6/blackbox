@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import type { EmailDirection } from "@prisma/client";
@@ -14,11 +15,12 @@ import type { ClaimWorkspaceProps } from "@/components/claims/claim-detail-types
 import { EmailSignature } from "@/components/email/email-signature";
 import { ClaimField } from "@/components/claims/claim-field";
 import {
-  EMAIL_SIGNATORIES,
   emailSignatoryById,
   resolveOutboundSignatory,
   stripEmailSignature,
   type EmailSignatoryId,
+  type EmailSignatory,
+  EMAIL_SIGNATURE_FENCE,
 } from "@/lib/email/signatures";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +34,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+function LoggedSignature({ signatory, body }: { signatory: EmailSignatory | null; body: string }) {
+  if (signatory) return <EmailSignature signatory={signatory} />;
+  const idx = body.indexOf(EMAIL_SIGNATURE_FENCE);
+  if (idx === -1) return null;
+  return (
+    <p className="mt-4 whitespace-pre-wrap border-t border-brand-gold/40 pt-4 text-[11px] text-brand-slate">
+      {body.slice(idx + EMAIL_SIGNATURE_FENCE.length)}
+    </p>
+  );
+}
+
 export function EmailsTab({ claim, editable }: ClaimWorkspaceProps) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -42,14 +55,18 @@ export function EmailsTab({ claim, editable }: ClaimWorkspaceProps) {
   const [ccAddress, setCcAddress] = useState("");
   const [body, setBody] = useState("");
   const [emailDate, setEmailDate] = useState("");
-  const [signatoryId, setSignatoryId] = useState<EmailSignatoryId>("miguel");
-  const signatory = emailSignatoryById(signatoryId);
+  const { data: authSession } = useSession();
+  const [signatoryId, setSignatoryId] = useState<EmailSignatoryId>(
+    () => emailSignatoryById(claim.signatories, authSession?.user.id)?.id ?? claim.signatories[0]?.id ?? ""
+  );
+  const signatory = emailSignatoryById(claim.signatories, signatoryId);
 
   async function addEmail() {
     setError("");
     const outbound = direction === "OUTBOUND";
     const sender = outbound
       ? resolveOutboundSignatory({
+          signatories: claim.signatories,
           body,
           fromAddress,
           signatoryId,
@@ -140,11 +157,13 @@ export function EmailsTab({ claim, editable }: ClaimWorkspaceProps) {
                     : e.body}
                 </p>
                 {e.direction === "OUTBOUND" ? (
-                  <EmailSignature
+                  <LoggedSignature
                     signatory={resolveOutboundSignatory({
+                      signatories: claim.signatories,
                       body: e.body,
                       fromAddress: e.fromAddress,
                     })}
+                    body={e.body}
                   />
                 ) : null}
               </div>
@@ -195,14 +214,14 @@ export function EmailsTab({ claim, editable }: ClaimWorkspaceProps) {
                     onValueChange={(v) => {
                       const next = v as EmailSignatoryId;
                       setSignatoryId(next);
-                      setFromAddress(emailSignatoryById(next).email);
+                      setFromAddress(emailSignatoryById(claim.signatories, next)?.email ?? "");
                     }}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {EMAIL_SIGNATORIES.map((s) => (
+                      {claim.signatories.map((s) => (
                         <SelectItem key={s.id} value={s.id}>
                           {s.name} — {s.title}
                         </SelectItem>
@@ -213,7 +232,7 @@ export function EmailsTab({ claim, editable }: ClaimWorkspaceProps) {
               ) : null}
               <ClaimField label="From">
                 <Input
-                  value={direction === "OUTBOUND" ? signatory.email : fromAddress}
+                  value={direction === "OUTBOUND" ? (signatory?.email ?? "") : fromAddress}
                   onChange={(e) => setFromAddress(e.target.value)}
                   readOnly={direction === "OUTBOUND"}
                 />
@@ -236,7 +255,7 @@ export function EmailsTab({ claim, editable }: ClaimWorkspaceProps) {
                   onChange={(e) => setBody(e.target.value)}
                   rows={6}
                 />
-                {direction === "OUTBOUND" ? (
+                {direction === "OUTBOUND" && signatory ? (
                   <EmailSignature signatory={signatory} />
                 ) : null}
               </ClaimField>

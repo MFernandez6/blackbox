@@ -6,7 +6,8 @@ import { requireSession, canEdit, canManagePayments } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { openClaimFromIntake } from "@/lib/claims/open-from-intake";
 import { deleteStoredDocument } from "@/lib/storage";
-import { contingencyForCat } from "@/lib/utils";
+import { assertCanEditClaim } from "@/lib/claims/access";
+import { logClaimAudit } from "@/lib/claims/audit";
 import {
   fnolIntakeSchema,
   statusChangeSchema,
@@ -70,10 +71,9 @@ export async function changeClaimStatusAction(
   raw: StatusChangeInput
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession();
-    if (!canEdit(session.user.role)) {
-      return { ok: false, error: "Insufficient privileges to alter status." };
-    }
+    const gate = await assertCanEditClaim(claimId);
+    if (gate.error) return { ok: false, error: gate.error };
+    const session = gate.session;
 
     const parsed = statusChangeSchema.safeParse(raw);
     if (!parsed.success) {
@@ -117,14 +117,20 @@ export async function archiveClaimAction(
   claimId: string
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession();
-    if (!canEdit(session.user.role)) {
-      return { ok: false, error: "Insufficient privileges to archive." };
-    }
+    const gate = await assertCanEditClaim(claimId);
+    if (gate.error) return { ok: false, error: gate.error };
 
     await prisma.claim.update({
       where: { id: claimId },
       data: { isArchived: true },
+    });
+    await logClaimAudit({
+      claimId,
+      actorId: gate.session.user.id,
+      action: "CLAIM_ARCHIVE",
+      entityType: "Claim",
+      entityId: claimId,
+      summary: "Archived and sealed the file",
     });
 
     revalidatePath("/dashboard");
@@ -201,10 +207,9 @@ export async function updateClaimDetailAction(
   raw: ClaimDetailUpdateInput
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession();
-    if (!canEdit(session.user.role)) {
-      return { ok: false, error: "Insufficient privileges to edit." };
-    }
+    const gate = await assertCanEditClaim(claimId);
+    if (gate.error) return { ok: false, error: gate.error };
+    const session = gate.session;
 
     const parsed = claimDetailUpdateSchema.safeParse(raw);
     if (!parsed.success) {
@@ -215,7 +220,17 @@ export async function updateClaimDetailAction(
     }
 
     const d = parsed.data;
-    const fee = contingencyForCat(d.isCatClaim);
+    const current = await prisma.claim.findUnique({
+      where: { id: claimId },
+      select: { assignedAdjusterId: true },
+    });
+    const requestedAssignee = d.assignedAdjusterId || null;
+    if (
+      requestedAssignee !== (current?.assignedAdjusterId ?? null) &&
+      session.user.role !== "ADMIN"
+    ) {
+      return { ok: false, error: "Only an admin can reassign a file." };
+    }
     const estimatedValue = toDecimal(
       d.estimatedValue as string | number | null | undefined
     );
@@ -243,9 +258,7 @@ export async function updateClaimDetailAction(
             ? d.experts.filter((e) => e.name.trim())
             : Prisma.JsonNull,
         estimatedValue,
-        isCatClaim: d.isCatClaim,
-        contingencyFeePercent: fee,
-        assignedAdjusterId: d.assignedAdjusterId || null,
+        assignedAdjusterId: requestedAssignee,
       },
     });
 
@@ -263,10 +276,8 @@ export async function updateClaimantsAction(
   claimants: unknown
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession();
-    if (!canEdit(session.user.role)) {
-      return { ok: false, error: "Insufficient privileges to edit." };
-    }
+    const gate = await assertCanEditClaim(claimId);
+    if (gate.error) return { ok: false, error: gate.error };
 
     const listSchema = claimantSchema
       .array()
@@ -354,10 +365,9 @@ export async function registerDocumentAction(input: {
   docType: string;
 }): Promise<ActionResult<{ id: string }>> {
   try {
-    const session = await requireSession();
-    if (!canEdit(session.user.role)) {
-      return { ok: false, error: "Insufficient privileges to upload." };
-    }
+    const gate = await assertCanEditClaim(input.claimId);
+    if (gate.error) return { ok: false, error: gate.error };
+    const session = gate.session;
 
     // AI_HOOK: after upload, call extraction service and
     // populate Document.extractedData + set extractionStatus
@@ -398,8 +408,6 @@ export async function updateCoverageAction(
   raw: unknown
 ): Promise<ActionResult> {
   try {
-    const { assertCanEditClaim } = await import("@/lib/claims/access");
-    const { logClaimAudit } = await import("@/lib/claims/audit");
     const gate = await assertCanEditClaim(claimId);
     if (gate.error || !gate.session) {
       return { ok: false, error: gate.error ?? "Unauthorized." };

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { computeFeeCap } from "@/lib/compliance/florida-pa";
 
 export const claimStatusEnum = z.enum([
   "INTAKE",
@@ -100,7 +101,7 @@ export const fnolIntakeSchema = z
   })
   .transform((data) => ({
     ...data,
-    contingencyFeePercent: data.property.isCatClaim ? 10 : 20,
+    contingencyFeePercent: computeFeeCap({ isEmergencyLoss: data.property.isCatClaim }).capPercent,
   }));
 
 export const statusChangeSchema = z.object({
@@ -139,7 +140,6 @@ export const claimDetailUpdateSchema = z.object({
   fieldAdjusterEmail: z.string().nullable().optional(),
   experts: z.array(carrierExpertSchema).optional().default([]),
   estimatedValue: z.union([z.string(), z.number(), z.null()]).optional(),
-  isCatClaim: z.boolean(),
   assignedAdjusterId: z.string().nullable().optional(),
 });
 
@@ -166,6 +166,34 @@ export const paymentCreateSchema = z.object({
   amount: z.coerce.number().positive("Amount must be positive"),
   date: z.string().min(1),
   note: z.string().optional().nullable(),
+});
+
+const optionalDate = z
+  .string()
+  .nullable()
+  .optional()
+  .transform((v) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null));
+
+export const claimComplianceSchema = z.object({
+  isCatClaim: z.boolean(),
+  emergencyDeclarationId: z.string().nullable().optional(),
+  claimReportedDate: optionalDate,
+  isReopenedClaim: z.boolean(),
+  priorInsurerPayments: moneyOptionalSchema,
+  contractExecutedDate: optionalDate,
+  contractSentToInsurerDate: optionalDate,
+  contractCancelledDate: optionalDate,
+});
+
+export type ClaimComplianceInput = z.input<typeof claimComplianceSchema>;
+
+export const emergencyDeclarationSchema = z.object({
+  name: z.string().trim().min(3, "Name the event (e.g. Hurricane Milton)"),
+  executiveOrder: z.string().trim().max(40).nullable().optional(),
+  declaredDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Declaration date is required"),
+  counties: z.string().trim().max(2000).nullable().optional(),
+  notes: z.string().trim().max(2000).nullable().optional(),
+  isActive: z.boolean().default(true),
 });
 
 export const loginSchema = z.object({

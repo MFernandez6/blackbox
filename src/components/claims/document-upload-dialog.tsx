@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ALLOWED_UPLOAD_ACCEPT } from "@/lib/security/file-signature";
 
 type Props = {
   claimId: string;
@@ -198,6 +199,7 @@ export function DocumentUploadDialog({
             </p>
             <input
               type="file"
+              accept={ALLOWED_UPLOAD_ACCEPT}
               className="mt-4 block w-full text-sm text-brand-slate file:mr-4 file:border file:border-brand-white/10 file:bg-brand-navy file:px-3 file:py-1.5 file:font-sans file:text-[10px] file:uppercase file:tracking-[0.12em] file:text-brand-white"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />

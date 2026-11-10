@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { documentHref, extractStoragePath } from "@/lib/storage";
+import { signatoryFromAdjuster } from "@/lib/email/signatures";
 import {
   ClaimDetailClient,
   type ClaimDetailData,
@@ -92,14 +94,21 @@ async function ClaimDetailDataLoader({
     redirect("/dashboard");
   }
 
-  const [adjusters, firmHistory, report] = await Promise.all([
+  const [adjusters, firmHistory, report, declarations] = await Promise.all([
     prisma.adjuster.findMany({
-      where: { isActive: true, role: { in: ["ADMIN", "ADJUSTER"] } },
-      select: { id: true, name: true },
+      where: { isActive: true },
+      select: { id: true, name: true, email: true, role: true, licenseNumber: true, title: true, phone: true },
       orderBy: { name: "asc" },
     }),
     loadFirmHistory(claim),
     loadSummaryReportPayload({ id: claim.id }),
+    prisma.emergencyDeclaration.findMany({
+      where: {
+        OR: [{ isActive: true }, ...(claim.emergencyDeclarationId ? [{ id: claim.emergencyDeclarationId }] : [])],
+      },
+      orderBy: { declaredDate: "desc" },
+      select: { id: true, name: true, executiveOrder: true, declaredDate: true },
+    }),
   ]);
   const reportChecklist = report ? summaryReportChecklist(resolveSummaryReport(report)) : [];
 
@@ -164,6 +173,22 @@ async function ClaimDetailDataLoader({
     firmHistory,
     isCatClaim: claim.isCatClaim,
     contingencyFeePercent: claim.contingencyFeePercent.toString(),
+    signatories: adjusters.map(signatoryFromAdjuster),
+    compliance: {
+      emergencyDeclarationId: claim.emergencyDeclarationId,
+      claimReportedDate: isoDate(claim.claimReportedDate),
+      isReopenedClaim: claim.isReopenedClaim,
+      priorInsurerPayments: claim.priorInsurerPayments?.toString() ?? null,
+      contractExecutedDate: isoDate(claim.contractExecutedDate),
+      contractSentToInsurerDate: isoDate(claim.contractSentToInsurerDate),
+      contractCancelledDate: isoDate(claim.contractCancelledDate),
+      declarations: declarations.map((d) => ({
+        id: d.id,
+        name: d.name,
+        executiveOrder: d.executiveOrder,
+        declaredDate: d.declaredDate.toISOString().slice(0, 10),
+      })),
+    },
     assignedAdjusterId: claim.assignedAdjusterId,
     initialContactDate: isoDate(claim.initialContactDate),
     scheduledAppointmentDate: isoDate(claim.scheduledAppointmentDate),
@@ -219,7 +244,8 @@ async function ClaimDetailDataLoader({
     documents: claim.documents.map((d) => ({
       id: d.id,
       fileName: d.fileName,
-      fileUrl: d.fileUrl,
+      fileUrl: documentHref(d),
+      sourcePath: `/${extractStoragePath(d.fileUrl) ?? ""}`,
       mimeType: d.mimeType,
       docType: d.docType,
       uploadedAt: d.uploadedAt.toISOString(),
@@ -326,7 +352,9 @@ async function ClaimDetailDataLoader({
   return (
     <ClaimDetailClient
       claim={data}
-      adjusters={adjusters}
+      adjusters={adjusters
+        .filter((a) => a.role !== "VIEWER")
+        .map((a) => ({ id: a.id, name: a.name }))}
       role={session.user.role}
       initialTab={tab}
       letterUrl={blackletterAppUrl() ?? "http://localhost:3004"}
