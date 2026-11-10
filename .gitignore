@@ -33,6 +33,9 @@ yarn-error.log*
 /public/uploads/**
 !/public/uploads/.gitkeep
 
+# card-reader engine and language models, copied at dev/build time
+/public/ocr
+
 # vercel
 .vercel
 

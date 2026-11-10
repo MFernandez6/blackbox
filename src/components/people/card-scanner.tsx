@@ -131,7 +131,13 @@ export function CardScanner({
       const source = await decodeImage(file);
 
       const { createWorker } = await import("tesseract.js");
+      // Models are served from this app. The page policy blocks the public CDN
+      // the library would otherwise download the worker, engine, and languages from.
       worker = await createWorker(["eng", "spa"], 1, {
+        workerPath: "/ocr/worker.min.js",
+        corePath: "/ocr/core",
+        langPath: "/ocr/lang",
+        workerBlobURL: false,
         logger: (m) => {
           if (m.status === "recognizing text") {
             setStatus(`Reading card… ${Math.round(m.progress * 100)}%`);
