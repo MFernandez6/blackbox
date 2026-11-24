@@ -21,7 +21,10 @@ type SearchParams = {
   to?: string;
   sort?: string;
   dir?: string;
+  page?: string;
 };
+
+const PAGE_SIZE = 50;
 
 async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
   const session = await getSession();
@@ -100,6 +103,7 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
     }
   })();
 
+  const requestedPage = Math.max(1, Number.parseInt(searchParams.page ?? "1", 10) || 1);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -116,6 +120,7 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
 
   const [
     claims,
+    claimTotal,
     adjusters,
     statusGroups,
     openAgg,
@@ -128,11 +133,28 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
     prisma.claim.findMany({
       where,
       orderBy,
-      include: {
-        claimants: { where: { isPrimaryContact: true }, take: 1 },
+      skip: (requestedPage - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      select: {
+        id: true,
+        claimNumber: true,
+        insurerClaimNumber: true,
+        status: true,
+        lossType: true,
+        dateOfLoss: true,
+        estimatedValue: true,
+        updatedAt: true,
+        createdAt: true,
+        assignedAdjusterId: true,
+        claimants: {
+          where: { isPrimaryContact: true },
+          take: 1,
+          select: { firstName: true, lastName: true },
+        },
         assignedAdjuster: { select: { name: true } },
       },
     }),
+    prisma.claim.count({ where }),
     prisma.adjuster.findMany({
       where: { isActive: true, role: { in: ["ADMIN", "ADJUSTER"] } },
       select: { id: true, name: true },
@@ -290,6 +312,7 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
     };
   });
 
+  // Name lives on Claimant, so this sort orders the current page only.
   if (sort === "claimant") {
     rows.sort((a, b) => {
       const cmp = a.primaryClaimant.localeCompare(b.primaryClaimant);
@@ -313,6 +336,9 @@ async function DashboardData({ searchParams }: { searchParams: SearchParams }) {
     <div className="space-y-8">
       <DashboardClient
         claims={rows}
+        page={requestedPage}
+        pageSize={PAGE_SIZE}
+        total={claimTotal}
         summary={{
           openCount: openAgg._count._all,
           byStatus,

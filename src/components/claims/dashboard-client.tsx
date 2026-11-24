@@ -57,6 +57,9 @@ type AdjusterOption = { id: string; name: string };
 
 type Props = {
   claims: DashboardClaimRow[];
+  page: number;
+  pageSize: number;
+  total: number;
   summary: DashboardSummary;
   adjusters: AdjusterOption[];
   canEditClaims: boolean;
@@ -70,6 +73,9 @@ const ALL_LOSS = Object.keys(LOSS_TYPE_LABELS) as LossType[];
 
 export function DashboardClient({
   claims,
+  page,
+  pageSize,
+  total,
   summary,
   adjusters,
   canEditClaims,
@@ -98,6 +104,7 @@ export function DashboardClient({
       const params = new URLSearchParams(searchParams.toString());
       if (!value || value === "all") params.delete(key);
       else params.set(key, value);
+      if (key !== "page") params.delete("page");
       startTransition(() => {
         router.push(`${pathname}?${params.toString()}`);
       });
@@ -227,11 +234,22 @@ export function DashboardClient({
     router.refresh();
   }
 
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
+  function pageHref(n: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (n <= 1) params.delete("page");
+    else params.set("page", String(n));
+    const q = params.toString();
+    return q ? `${pathname}?${q}` : pathname;
+  }
+
   function sortLink(col: string) {
     const nextDir = sort === col && dir === "desc" ? "asc" : "desc";
     const params = new URLSearchParams(searchParams.toString());
     params.set("sort", col);
     params.set("dir", nextDir);
+    params.delete("page");
     return `${pathname}?${params.toString()}`;
   }
 
@@ -461,10 +479,10 @@ export function DashboardClient({
                   <Checkbox
                     checked={allSelected}
                     onCheckedChange={(c) => toggleAll(!!c)}
-                    aria-label="Select all"
+                    aria-label="Select this page"
                   />
                   <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
-                    Select all files
+                    Select this page
                   </p>
                 </div>
               ) : null}
@@ -609,7 +627,7 @@ export function DashboardClient({
                         <Checkbox
                           checked={allSelected}
                           onCheckedChange={(c) => toggleAll(!!c)}
-                          aria-label="Select all"
+                          aria-label="Select this page"
                         />
                       </th>
                     ) : null}
@@ -724,6 +742,35 @@ export function DashboardClient({
           </>
         )}
       </div>
+      {total > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="font-mono text-xs text-brand-slate">
+            {Math.min((page - 1) * pageSize + 1, total)}–{Math.min(page * pageSize, total)} of {total}
+          </p>
+          {pageCount > 1 ? (
+            <div className="flex gap-2">
+              {page > 1 ? (
+                <Button asChild size="sm" variant="outline">
+                  <Link href={pageHref(page - 1)}>Previous</Link>
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" disabled>
+                  Previous
+                </Button>
+              )}
+              {page < pageCount ? (
+                <Button asChild size="sm" variant="outline">
+                  <Link href={pageHref(page + 1)}>Next</Link>
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" disabled>
+                  Next
+                </Button>
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
