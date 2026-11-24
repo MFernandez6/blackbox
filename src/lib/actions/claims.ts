@@ -2,20 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
-import { requireSession, canEdit, canManagePayments } from "@/lib/auth";
+import { requireSession, canManagePayments } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { openClaimFromIntake } from "@/lib/claims/open-from-intake";
 import { deleteStoredDocument } from "@/lib/storage";
 import { assertCanEditClaim } from "@/lib/claims/access";
 import { logClaimAudit } from "@/lib/claims/audit";
 import {
-  fnolIntakeSchema,
   statusChangeSchema,
   claimDetailUpdateSchema,
   coverageUpdateSchema,
   paymentCreateSchema,
   claimantSchema,
-  type FnolIntakeInput,
   type StatusChangeInput,
   type ClaimDetailUpdateInput,
 } from "@/lib/schemas/claim";
@@ -31,39 +28,6 @@ function toDecimal(
     typeof value === "string" ? Number(value.replace(/,/g, "")) : value;
   if (Number.isNaN(n)) return null;
   return new Prisma.Decimal(n);
-}
-
-export async function createClaimAction(
-  raw: FnolIntakeInput
-): Promise<ActionResult<{ id: string; claimNumber: string }>> {
-  try {
-    const session = await requireSession();
-    if (!canEdit(session.user.role)) {
-      return { ok: false, error: "Insufficient privileges to open a record." };
-    }
-
-    const parsed = fnolIntakeSchema.safeParse(raw);
-    if (!parsed.success) {
-      return {
-        ok: false,
-        error: parsed.error.errors[0]?.message ?? "Validation failed.",
-      };
-    }
-
-    const claim = await openClaimFromIntake({
-      parsed: parsed.data,
-      actorId: session.user.id,
-    });
-
-    revalidatePath("/dashboard");
-    return {
-      ok: true,
-      data: { id: claim.id, claimNumber: claim.claimNumber },
-    };
-  } catch (e) {
-    console.error(e);
-    return { ok: false, error: "Unable to open record. Retry or contact admin." };
-  }
 }
 
 export async function changeClaimStatusAction(
