@@ -14,8 +14,7 @@ Ops tool for adjusters and staff — not client-facing. Owner / principal: Migue
 
 ## Supabase setup
 
-1. Project already wired for client SDK (`@supabase/supabase-js` + `@supabase/ssr`).
-   Helpers: `src/lib/supabase/{client,server,middleware}.ts`
+1. Claim files go to Storage through `src/lib/storage.ts` (REST). The app does not use the Supabase JS client.
 2. `.env.local` must include:
 
 | Variable | Source |
