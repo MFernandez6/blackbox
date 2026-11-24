@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
@@ -18,18 +19,48 @@ import type {
   ClaimDetailData,
   AdjusterOption,
 } from "@/components/claims/claim-detail-types";
-import {
-  OverviewTab,
-  CoverageStrategyTab,
-  ContactsTab,
-  TasksTab,
-  ActivityTab,
-  DemandSettlementTab,
-  EmailsTab,
-  DatesTab,
-  ReportsTab,
-} from "@/components/claims/tabs";
-import { DocumentsVaultClient } from "@/components/claims/documents-vault-client";
+import { OverviewTab } from "@/components/claims/tabs/overview-tab";
+
+function tabFallback() {
+  return <div className="h-40 animate-pulse rounded-2xl border border-brand-gold/15" />;
+}
+
+const CoverageStrategyTab = dynamic(
+  () => import("@/components/claims/tabs/coverage-strategy-tab").then((m) => m.CoverageStrategyTab),
+  { loading: tabFallback }
+);
+const ContactsTab = dynamic(
+  () => import("@/components/claims/tabs/contacts-tab").then((m) => m.ContactsTab),
+  { loading: tabFallback }
+);
+const TasksTab = dynamic(
+  () => import("@/components/claims/tabs/tasks-tab").then((m) => m.TasksTab),
+  { loading: tabFallback }
+);
+const ActivityTab = dynamic(
+  () => import("@/components/claims/tabs/activity-tab").then((m) => m.ActivityTab),
+  { loading: tabFallback }
+);
+const DemandSettlementTab = dynamic(
+  () => import("@/components/claims/tabs/demand-settlement-tab").then((m) => m.DemandSettlementTab),
+  { loading: tabFallback }
+);
+const EmailsTab = dynamic(
+  () => import("@/components/claims/tabs/emails-tab").then((m) => m.EmailsTab),
+  { loading: tabFallback }
+);
+const DatesTab = dynamic(
+  () => import("@/components/claims/tabs/dates-tab").then((m) => m.DatesTab),
+  { loading: tabFallback }
+);
+const ReportsTab = dynamic(
+  () => import("@/components/claims/tabs/reports-tab").then((m) => m.ReportsTab),
+  { loading: tabFallback }
+);
+const DocumentsVaultClient = dynamic(
+  () => import("@/components/claims/documents-vault-client").then((m) => m.DocumentsVaultClient),
+  { loading: tabFallback }
+);
 import { NextDocumentCard } from "@/components/claims/next-document-card";
 import { StatusBadge } from "@/components/claims/status-badge";
 import { GoogleMapsButton } from "@/components/claims/google-maps-button";
