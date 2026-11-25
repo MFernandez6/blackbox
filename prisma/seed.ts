@@ -150,7 +150,7 @@ async function main() {
   const miguel = await prisma.adjuster.create({
     data: {
       name: "Miguel Fernandez",
-      email: "miguel.fernandez@blacklineadjusting.com",
+      email: "miguel.fernandez@blacklinepublicadjusters.com",
       passwordHash,
       licenseNumber: "W100001",
       role: AdjusterRole.ADMIN,
@@ -824,7 +824,7 @@ async function main() {
             claimId: claim.id,
             direction: EmailDirection.OUTBOUND,
             subject: `FNOL acknowledgment — ${number}`,
-            fromAddress: "miguel.fernandez@blacklineadjusting.com",
+            fromAddress: "miguel.fernandez@blacklinepublicadjusters.com",
             toAddress: "claims@citizens.example",
             body: appendEmailSignature(
               "Please confirm receipt of FNOL and assign desk examiner. Loss photos and mitigation invoice to follow.",
@@ -832,7 +832,7 @@ async function main() {
                 id: "seed",
                 name: "Miguel A. Fernandez",
                 title: "Licensed Public Adjuster",
-                email: "miguel.fernandez@blacklineadjusting.com",
+                email: "miguel.fernandez@blacklinepublicadjusters.com",
                 phone: "",
                 license: null,
               }
@@ -851,7 +851,7 @@ async function main() {
   console.log("Seed complete.");
   console.log("  Adjusters: 5 (owner ADMIN + samples)");
   console.log(`  Claims:    ${claims.length} (year ${year}, sequence 0001–000${claims.length})`);
-  console.log(`  Login:     miguel.fernandez@blacklineadjusting.com (password from SEED_PASSWORD)`);
+  console.log(`  Login:     miguel.fernandez@blacklinepublicadjusters.com (password from SEED_PASSWORD)`);
   console.log(`             diana.reyes@blacklineadjusting.com (password from SEED_PASSWORD)`);
   console.log(`             frankie@blacklineadjusting.com (password from SEED_PASSWORD)`);
 }

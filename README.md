@@ -44,7 +44,7 @@ Seed adjusters share the password you supply in `SEED_PASSWORD` (local databases
 
 | Email | Role |
 |---|---|
-| `miguel.fernandez@blacklineadjusting.com` | ADMIN (owner / principal adjuster) |
+| `miguel.fernandez@blacklinepublicadjusters.com` | ADMIN (owner / principal adjuster) |
 | `diana.reyes@blacklineadjusting.com` | ADMIN |
 | `marcus.chen@blacklineadjusting.com` | ADJUSTER |
 | `frankie@blacklineadjusting.com` | ADJUSTER |

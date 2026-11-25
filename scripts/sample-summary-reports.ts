@@ -329,7 +329,7 @@ async function fillBlankDetails(claimId: string, details: Prisma.ClaimUpdateInpu
 async function main() {
   const actor =
     (await prisma.adjuster.findFirst({
-      where: { email: "miguel.fernandez@blacklineadjusting.com", isActive: true },
+      where: { email: "miguel.fernandez@blacklinepublicadjusters.com", isActive: true },
       select: { id: true, name: true },
     })) ??
     (await prisma.adjuster.findFirst({
