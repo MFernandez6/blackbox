@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -159,7 +160,15 @@ export default function LoginForm() {
           >
             {isSubmitting ? "Authenticating…" : "Enter BLACKBOX™"}
           </Button>
+          <p className="text-center text-sm">
+            <Link href="/forgot-password" className="text-brand-gold underline underline-offset-4">
+              Forgot password?
+            </Link>
+          </p>
         </form>
+        <p className="mt-4 text-center text-xs text-brand-slate">
+          Already signed in? Change it from your name menu, Password &amp; security.
+        </p>
 
         <p className="mt-8 text-center font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-brand-slate">
           Authorized personnel only · session encrypted

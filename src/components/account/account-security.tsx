@@ -37,7 +37,8 @@ const EVENT_LABELS: Record<string, string> = {
   LOCKED: "Account locked",
   MFA_FAILURE: "Wrong authenticator code",
   PASSWORD_CHANGED: "Password changed",
-  PASSWORD_RESET: "Password reset by admin",
+  PASSWORD_RESET: "Password reset",
+  PASSWORD_RESET_REQUEST: "Password reset requested",
   MFA_ENABLED: "MFA enabled",
   MFA_DISABLED: "MFA disabled",
   USER_CREATED: "Account created",
@@ -120,8 +121,8 @@ function PasswordSection({ user }: { user: Props["user"] }) {
   }
 
   return (
-    <section className="rounded-2xl border border-brand-gold/15 p-4 sm:p-5">
-      <p className="eyebrow mb-1">Password</p>
+    <section id="password" className="rounded-2xl border border-brand-gold/15 p-4 sm:p-5">
+      <p className="eyebrow mb-1">Change password</p>
       <p className="mb-4 text-xs text-brand-slate">
         Changing your password signs you out of every BLACKSUITE app and device.
       </p>

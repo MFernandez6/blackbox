@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import { generateTemporaryPassword } from "@/lib/security/temporary-password";
 import { recordAuthEvent } from "@/lib/security/login-guard";
+import { saveAdjusterPassword } from "@/lib/security/save-password";
 import type { ActionResult } from "@/lib/actions/claims";
 
 const roleEnum = z.enum(["ADMIN", "ADJUSTER", "VIEWER"]);
@@ -121,16 +122,7 @@ export async function resetUserPasswordAction(id: string): Promise<ActionResult<
     const user = await prisma.adjuster.findUnique({ where: { id } });
     if (!user) return { ok: false, error: "User not found." };
     const temporaryPassword = generateTemporaryPassword();
-    await prisma.adjuster.update({
-      where: { id },
-      data: {
-        passwordHash: await hash(temporaryPassword, 12),
-        mustChangePassword: true,
-        failedLoginCount: 0,
-        lockedUntil: null,
-        sessionVersion: { increment: 1 },
-      },
-    });
+    await saveAdjusterPassword(user, temporaryPassword, { mustChangePassword: true });
     await recordAuthEvent({ email: user.email, adjusterId: id, event: "PASSWORD_RESET", detail: `by ${session.user.email}` });
     revalidatePath("/admin/users");
     return { ok: true, data: { temporaryPassword } };

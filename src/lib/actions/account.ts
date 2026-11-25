@@ -1,6 +1,6 @@
 "use server";
 
-import { compare, hash } from "bcryptjs";
+import { compare } from "bcryptjs";
 import QRCode from "qrcode";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
@@ -14,6 +14,7 @@ import {
   verifyTotp,
 } from "@/lib/security/totp";
 import type { ActionResult } from "@/lib/actions/claims";
+import { saveAdjusterPassword } from "@/lib/security/save-password";
 
 async function currentAdjuster() {
   const session = await requireSession();
@@ -38,17 +39,7 @@ export async function changePasswordAction(input: {
       return { ok: false, error: "Choose a password you have not used here before." };
     }
 
-    await prisma.adjuster.update({
-      where: { id: adjuster.id },
-      data: {
-        passwordHash: await hash(input.newPassword, 12),
-        passwordChangedAt: new Date(),
-        mustChangePassword: false,
-        failedLoginCount: 0,
-        lockedUntil: null,
-        sessionVersion: { increment: 1 },
-      },
-    });
+    await saveAdjusterPassword(adjuster, input.newPassword, { mustChangePassword: false });
     await recordAuthEvent({ email: adjuster.email, adjusterId: adjuster.id, event: "PASSWORD_CHANGED" });
     return { ok: true, data: undefined };
   } catch (e) {

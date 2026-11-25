@@ -109,7 +109,7 @@ export function AccountMenu({ user }: Props) {
           <div className="my-3 border-t border-brand-white/10" />
 
           {[
-            { href: "/account", label: "Security", icon: ShieldCheck, show: true },
+            { href: "/account", label: "Password & security", icon: ShieldCheck, show: true },
             { href: "/admin/users", label: "Users", icon: Users, show: user.role === "ADMIN" },
             { href: "/admin/emergencies", label: "Emergencies", icon: Siren, show: user.role === "ADMIN" },
           ]
