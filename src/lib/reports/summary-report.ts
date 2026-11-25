@@ -9,7 +9,7 @@ export const SUMMARY_DATE_BLANK = "__/__/____";
 export const SUMMARY_REPORT_BRAND = {
   name: "Blackline Public Adjusters LLC",
   address: "100 Biscayne Boulevard, Suite 500, Miami, FL 33132",
-  website: "blacklineadjusting.com",
+  website: "blacklinepublicadjusters.com",
   tagline: "Licensed Public Adjusters · Prepared on behalf of the named insured",
   logoPath: "/brand/blackline-logo.png",
 } as const;

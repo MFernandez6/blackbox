@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     claimants: raw.claimants.map((c, index) => ({
       firstName: c.firstName,
       lastName: c.lastName,
-      email: c.email?.trim() || "intake@blacklineadjusting.com",
+      email: c.email?.trim() || "intake@blacklinepublicadjusters.com",
       phone: c.phone?.trim() || "0000000000",
       mailingAddress: c.mailingAddress?.trim() || propertyAddress,
       preferredContactMethod: c.preferredContactMethod ?? "EMAIL",
