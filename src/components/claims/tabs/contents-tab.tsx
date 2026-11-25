@@ -38,7 +38,12 @@ const MATCH: Record<string, string> = {
 export function ContentsTab({ claimId, editable }: { claimId: string; editable: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
   const [room, setRoom] = useState("");
+  const [itemType, setItemType] = useState("");
+  const [brand, setBrand] = useState("");
+  const [model, setModel] = useState("");
+  const [age, setAge] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [formKey, setFormKey] = useState(0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -77,6 +82,10 @@ export function ContentsTab({ claimId, editable }: { claimId: string; editable: 
     try {
       const form = new FormData();
       form.set("room", room);
+      form.set("itemType", itemType);
+      form.set("brand", brand);
+      form.set("model", model);
+      form.set("age", age);
       form.set("file", file);
       const res = await fetch(`/api/claims/${claimId}/contents`, { method: "POST", body: form });
       const data = (await res.json().catch(() => ({}))) as { error?: string; item?: Item };
@@ -84,6 +93,11 @@ export function ContentsTab({ claimId, editable }: { claimId: string; editable: 
       setItems((current) => [data.item!, ...current]);
       setFile(null);
       setRoom("");
+      setItemType("");
+      setBrand("");
+      setModel("");
+      setAge("");
+      setFormKey((key) => key + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "The product search did not finish.");
     } finally {
@@ -126,9 +140,9 @@ export function ContentsTab({ claimId, editable }: { claimId: string; editable: 
         <p className="eyebrow">Coverage C</p>
         <h2 className="mt-1 font-serif text-2xl text-brand-white">Contents inventory</h2>
         <p className="mt-2 max-w-2xl text-sm text-brand-slate">
-          Photograph a household item. A low-cost model finds the same product, or the closest
-          similar one, and starts the replacement cost. Confirmed lines are the inventory. They
-          are not a coverage decision.
+          Name the item, then add a photo. Room, type, brand, model, and age make the same
+          product easier to find. Confirmed lines are the inventory. They are not a coverage
+          decision.
         </p>
         <p className="mt-3 text-sm text-brand-white">
           Confirmed replacement total {formatCurrency(confirmedTotal)}
@@ -138,10 +152,26 @@ export function ContentsTab({ claimId, editable }: { claimId: string; editable: 
       {error ? <ErrorBanner message={error} onDismiss={() => setError("")} /> : null}
 
       {editable ? (
-        <form onSubmit={price} className="grid gap-4 rounded-2xl border border-brand-gold/15 p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+        <form key={formKey} onSubmit={price} className="grid gap-4 rounded-2xl border border-brand-gold/15 p-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="contents-room">Room or area</Label>
-            <Input id="contents-room" value={room} onChange={(e) => setRoom(e.target.value)} placeholder="Kitchen" required />
+            <Input id="contents-room" value={room} onChange={(e) => setRoom(e.target.value)} placeholder="Bedroom" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="contents-type">What is it</Label>
+            <Input id="contents-type" value={itemType} onChange={(e) => setItemType(e.target.value)} placeholder="Rain boots" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="contents-brand">Brand</Label>
+            <Input id="contents-brand" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="Hunter" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="contents-model">Model</Label>
+            <Input id="contents-model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="Original Tall" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="contents-age">Age</Label>
+            <Input id="contents-age" value={age} onChange={(e) => setAge(e.target.value)} placeholder="About 2 years" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="contents-photo">Photo</Label>
@@ -154,7 +184,7 @@ export function ContentsTab({ claimId, editable }: { claimId: string; editable: 
               required
             />
           </div>
-          <Button type="submit" disabled={busy || room.trim().length < 2 || !file}>
+          <Button type="submit" disabled={busy || room.trim().length < 2 || itemType.trim().length < 2 || !file}>
             {busy ? "Searching…" : "Price this item"}
           </Button>
         </form>

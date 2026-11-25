@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { assertCanEditClaim, assertCanViewClaim } from "@/lib/claims/access";
 import { documentHref, storeClaimDocument } from "@/lib/storage";
 import { detectAllowedFile } from "@/lib/security/file-signature";
-import { contentsAiAvailable, identifyContentsItem } from "@/lib/ai/identify-contents";
+import { contentsAiAvailable, identifyContentsItem, type ContentsHints } from "@/lib/ai/identify-contents";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -116,8 +116,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 
   const form = await req.formData();
-  const room = String(form.get("room") ?? "").replace(/[\r\n]+/g, " ").trim().slice(0, 80);
-  if (room.length < 2) return NextResponse.json({ error: "Enter the room or area." }, { status: 422 });
+  const hints = readHints(form);
+  if (!hints) return NextResponse.json({ error: "Enter the room and what the item is." }, { status: 422 });
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "Choose a photo." }, { status: 400 });
   const bytes = Buffer.from(await file.arrayBuffer());
@@ -134,7 +134,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   let identified;
   try {
-    identified = await identifyContentsItem({ bytes, mimeType: detected.mime, room });
+    identified = await identifyContentsItem({ bytes, mimeType: detected.mime, hints });
   } catch (err) {
     console.error("[contents] identify failed", err);
     return NextResponse.json({ error: "The product search did not finish. Try the photo again." }, { status: 502 });
@@ -142,7 +142,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const stored = await storeClaimDocument({
     claimId: params.id,
-    fileName: `contents-${room.slice(0, 24)}.${detected.ext}`,
+    fileName: `contents-${hints.itemType.slice(0, 24)}.${detected.ext}`,
     bytes,
     mimeType: detected.mime,
   });
@@ -160,12 +160,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const item = await prisma.contentsItem.create({
     data: {
       claimId: params.id,
-      room,
+      room: hints.room,
       quantity: identified.quantity,
-      itemName: identified.itemName,
-      brand: identified.brand,
-      modelNumber: identified.modelNumber,
-      description: identified.description,
+      itemName: identified.itemName || hints.itemType,
+      brand: identified.brand || hints.brand,
+      modelNumber: identified.modelNumber || hints.modelNumber,
+      description: withAge(identified.description, hints.age),
+      notes: hints.age ? `Age: ${hints.age}` : null,
       condition: identified.condition,
       matchKind: identified.matchKind,
       productTitle: identified.productTitle,
@@ -251,4 +252,28 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   if (!existing) return NextResponse.json({ error: "Item not found." }, { status: 404 });
   await prisma.contentsItem.delete({ where: { id: existing.id } });
   return NextResponse.json({ ok: true });
+}
+
+function clipField(form: FormData, key: string, max: number) {
+  const text = String(form.get(key) ?? "").replace(/[\r\n]+/g, " ").trim().slice(0, max);
+  return text || null;
+}
+
+function readHints(form: FormData): ContentsHints | null {
+  const room = clipField(form, "room", 80);
+  const itemType = clipField(form, "itemType", 80);
+  if (!room || room.length < 2 || !itemType || itemType.length < 2) return null;
+  return {
+    room,
+    itemType,
+    brand: clipField(form, "brand", 80),
+    modelNumber: clipField(form, "model", 80),
+    age: clipField(form, "age", 40),
+  };
+}
+
+function withAge(description: string, age: string | null) {
+  if (!age) return description || null;
+  const note = `Approximate age: ${age}.`;
+  return description ? `${description} ${note}`.slice(0, 600) : note;
 }
