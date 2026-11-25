@@ -57,6 +57,10 @@ const ReportsTab = dynamic(
   () => import("@/components/claims/tabs/reports-tab").then((m) => m.ReportsTab),
   { loading: tabFallback }
 );
+const ContentsTab = dynamic(
+  () => import("@/components/claims/tabs/contents-tab").then((m) => m.ContentsTab),
+  { loading: tabFallback }
+);
 const DocumentsVaultClient = dynamic(
   () => import("@/components/claims/documents-vault-client").then((m) => m.DocumentsVaultClient),
   { loading: tabFallback }
@@ -90,6 +94,7 @@ export type { ClaimDetailData } from "@/components/claims/claim-detail-types";
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "strategy", label: "Coverage Strategy" },
+  { id: "contents", label: "Contents" },
   { id: "reports", label: "Reports" },
   { id: "contacts", label: "Contacts / People" },
   { id: "tasks", label: "Tasks" },
@@ -378,6 +383,9 @@ export function ClaimDetailClient({
         </TabsContent>
         <TabsContent value="strategy">
           <CoverageStrategyTab {...workspace} />
+        </TabsContent>
+        <TabsContent value="contents">
+          <ContentsTab claimId={claim.id} editable={editable && !claim.isArchived} />
         </TabsContent>
         <TabsContent value="reports">
           <ReportsTab {...workspace} letterUrl={letterUrl} />
